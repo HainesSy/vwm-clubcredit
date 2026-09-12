@@ -1,0 +1,17 @@
+Member_ID,Full_Name,Phone,Email,Tier,Credit_Amount,Status_Current_Month,Redeemed_At,Redeemed_Store,Redeemed_By_Staff,Notes
+MBR-1001,John Smith,555-0101,john.smith@example.com,Grand Cru Club,40.00,AVAILABLE,,,Enjoys Cabernet Sauvignon
+MBR-1088,John Smith,555-0988,jsmith.vintage@gmail.com,Value Club,15.00,AVAILABLE,,,Member since 2024 • Prefers White Wine
+MBR-1002,Sarah Johnson,555-0102,sarah.j@example.com,Value Club,15.00,AVAILABLE,,,Prefers Pinot Noir
+MBR-1003,Michael Davis,555-0103,mdavis@example.com,Grand Cru Club,40.00,REDEEMED,2026-09-04 18:22:15,Store 1,Alex B.,Birthday month
+MBR-1004,Emily Wilson,555-0104,emily.w@example.com,Value Club,15.00,AVAILABLE,,,Allergic to sulfites (prefers natural)
+MBR-1005,Robert Martinez,555-0105,robert.m@example.com,Grand Cru Club,40.00,AVAILABLE,,,Founder member
+MBR-1006,Jessica Taylor,555-0106,jtaylor@example.com,Grand Cru Club,40.00,REDEEMED,2026-09-08 19:45:00,Store 2,Taylor K.,Regular Saturday guest
+MBR-1007,David Anderson,555-0107,dave.anderson@example.com,Value Club,15.00,AVAILABLE,,,Red wine lover
+MBR-1008,Amanda Thomas,555-0108,amanda.t@example.com,Grand Cru Club,40.00,AVAILABLE,,,White wine only
+MBR-1009,James Jackson,555-0109,jjackson@example.com,Value Club,15.00,AVAILABLE,,,
+MBR-1010,Jennifer White,555-0110,jennifer.w@example.com,Grand Cru Club,40.00,AVAILABLE,,,Prefers sparkling wine
+MBR-1011,Christopher Harris,555-0111,charris@example.com,Value Club,15.00,AVAILABLE,,,
+MBR-1012,Lisa Martin,555-0112,lisa.m@example.com,Grand Cru Club,40.00,AVAILABLE,,,
+MBR-1013,Matthew Clark,555-0113,mclark@example.com,Value Club,15.00,AVAILABLE,,,
+MBR-1014,Ashley Lewis,555-0114,alewis@example.com,Grand Cru Club,40.00,AVAILABLE,,,
+MBR-1015,Daniel Robinson,555-0115,drobinson@example.com,Grand Cru Club,40.00,AVAILABLE,,,

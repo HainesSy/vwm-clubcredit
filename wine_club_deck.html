@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wine Club Benefit Verifier - Proposal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+    .slide {
+      display: none;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .slide.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-[#171717] text-neutral-100 min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+
+  <!-- Presentation Container -->
+  <div class="w-full max-w-5xl bg-[#212121] border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-[680px]">
+    
+    <!-- Top Bar -->
+    <div class="px-8 py-5 bg-[#1a1a1a] border-b border-neutral-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xs">
+          W
+        </div>
+        <div>
+          <h1 class="font-semibold text-base text-neutral-100 tracking-wide">Wine Club Member Benefits</h1>
+          <p class="text-[11px] text-neutral-400 font-medium tracking-wider">Fast iPad Verification System &bull; Store 1 &amp; Store 2</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-[11px] font-semibold tracking-wider uppercase px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 border border-neutral-700">
+          Executive Review
+        </span>
+        <div class="text-xs text-neutral-400 font-medium" id="slideNumber">Slide 1 of 5</div>
+      </div>
+    </div>
+
+    <!-- Slide Content Area -->
+    <div class="flex-1 p-6 sm:p-10 flex flex-col justify-center">
+
+      <!-- SLIDE 1: Executive Overview -->
+      <div class="slide active flex-col gap-6" id="slide-1">
+        <div class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-700/50 text-emerald-400 text-[11px] font-semibold tracking-wider uppercase w-fit">
+          Executive Summary
+        </div>
+        <h2 class="text-3xl sm:text-5xl font-bold text-white leading-tight">
+          Streamlining Member Benefits at the Bar
+        </h2>
+        <p class="text-base sm:text-lg text-neutral-300 max-w-3xl leading-relaxed">
+          Replacing spreadsheet lookup on counter iPads with a minimal, touch-first verification system. Cuts check verification time from <span class="text-rose-400 font-semibold">45 seconds</span> to <span class="text-emerald-400 font-semibold">3 seconds</span>, completely eliminates cross-store double-dipping, and costs <span class="text-emerald-400 font-semibold">$0 in new software</span>.
+        </p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-4">
+          <div class="p-6 rounded-xl bg-[#1a1a1a] border border-neutral-800">
+            <div class="text-2xl font-bold text-emerald-400 mb-1">3 Seconds</div>
+            <div class="text-sm font-semibold text-neutral-200">Zero-Clutter Search</div>
+            <div class="text-xs text-neutral-400 mt-1.5 leading-relaxed">Clean, distraction-free landing page inspired by ChatGPT with instant fuzzy lookup.</div>
+          </div>
+          <div class="p-6 rounded-xl bg-[#1a1a1a] border border-neutral-800">
+            <div class="text-2xl font-bold text-emerald-400 mb-1">Zero Revenue Loss</div>
+            <div class="text-sm font-semibold text-neutral-200">Cross-Store Lockout</div>
+            <div class="text-xs text-neutral-400 mt-1.5 leading-relaxed">Real-time sync ensures monthly credits cannot be redeemed at both stores.</div>
+          </div>
+          <div class="p-6 rounded-xl bg-[#1a1a1a] border border-neutral-800">
+            <div class="text-2xl font-bold text-neutral-300 mb-1">$0.00</div>
+            <div class="text-sm font-semibold text-neutral-200">Existing Google Sheets</div>
+            <div class="text-xs text-neutral-400 mt-1.5 leading-relaxed">Runs directly on top of our existing master spreadsheet with automatic monthly resets.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Minimal ChatGPT Landing Page -->
+      <div class="slide flex-col gap-4" id="slide-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white">1. Minimal, Distraction-Free Landing Page</h2>
+            <p class="text-neutral-400 text-xs sm:text-sm mt-0.5">&ldquo;Look up a wine club member&rdquo; &mdash; clear purpose with zero counter clutter:</p>
+          </div>
+          <span class="text-[11px] uppercase tracking-wider px-3 py-1 bg-neutral-800 text-neutral-300 border border-neutral-700 rounded-full font-semibold">
+            Clean Home
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-neutral-800 overflow-hidden shadow-2xl max-w-4xl mx-auto w-full bg-black">
+          <img src="./screenshots/gpt1_landing.png" alt="ChatGPT style landing page" class="w-full h-auto object-cover max-h-[380px]">
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 text-xs text-neutral-400 max-w-4xl mx-auto w-full pt-1">
+          <div><strong class="text-neutral-200">Instant Search:</strong> Large touch-friendly search pill for typing guest name or phone number.</div>
+          <div><strong class="text-neutral-200">One-Tap Alphabetical:</strong> &ldquo;List members alphabetically&rdquo; button instantly views the whole club.</div>
+          <div><strong class="text-neutral-200">No Visual Clutter:</strong> Clean dark surface designed for high-paced counter and bar environments.</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Alphabetical Directory & Multi-Factor Verification -->
+      <div class="slide flex-col gap-4" id="slide-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white">2. Alphabetical Directory &amp; Name Disambiguation</h2>
+            <p class="text-neutral-400 text-xs sm:text-sm mt-0.5">Two John Smiths? Contact numbers, emails, and club tiers clearly differentiate guests:</p>
+          </div>
+          <span class="text-[11px] uppercase tracking-wider px-3 py-1 bg-emerald-950/60 text-emerald-400 border border-emerald-800 rounded-full font-semibold">
+            A &rarr; Z Directory
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-neutral-800 overflow-hidden shadow-2xl max-w-4xl mx-auto w-full bg-black">
+          <img src="./screenshots/gpt3_alpha.png" alt="Alphabetical Member Directory" class="w-full h-auto object-cover max-h-[380px]">
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 text-xs text-neutral-400 max-w-4xl mx-auto w-full pt-1">
+          <div><strong class="text-neutral-200">Alphabetical Order:</strong> Fast visual browsing sorted cleanly from A to Z.</div>
+          <div><strong class="text-neutral-200">Phone &amp; Email:</strong> Prevents duplicate identity mistakes before redeeming.</div>
+          <div><strong class="text-neutral-200">Credit Clarity:</strong> Grand Cru ($40) and Value Club ($15) clearly demarcated.</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Verification Modal with Server Name -->
+      <div class="slide flex-col gap-4" id="slide-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white">3. Redemption Confirmation &amp; Server Attribution</h2>
+            <p class="text-neutral-400 text-xs sm:text-sm mt-0.5">Staff selects server name at the very end of the flow to maintain accountability:</p>
+          </div>
+          <span class="text-[11px] uppercase tracking-wider px-3 py-1 bg-amber-950/60 text-amber-400 border border-amber-800 rounded-full font-semibold">
+            Server Log
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-neutral-800 overflow-hidden shadow-2xl max-w-4xl mx-auto w-full bg-black">
+          <img src="./screenshots/gpt4_modal.png" alt="Confirmation Modal with Server Name" class="w-full h-auto object-cover max-h-[380px]">
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 text-xs text-neutral-400 max-w-4xl mx-auto w-full pt-1">
+          <div><strong class="text-neutral-200">Server Name Selection:</strong> Haines S, Harry F, and team selectable right at confirmation.</div>
+          <div><strong class="text-neutral-200">Accidental Tap Guard:</strong> Verifies guest name, tier, and credit before locking.</div>
+          <div><strong class="text-neutral-200">Instant Cross-Store Lock:</strong> Immediately synchronizes across Store 1 and Store 2.</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Locked State & Toast POS Instruction -->
+      <div class="slide flex-col gap-4" id="slide-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white">4. Locked State &amp; Toast POS Discount Prompt</h2>
+            <p class="text-neutral-400 text-xs sm:text-sm mt-0.5">Immediate lockout with an on-screen reminder of the matching Toast POS discount:</p>
+          </div>
+          <span class="text-[11px] uppercase tracking-wider px-3 py-1 bg-rose-950/60 text-rose-400 border border-rose-800 rounded-full font-semibold">
+            Toast Connected
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-neutral-800 overflow-hidden shadow-2xl max-w-4xl mx-auto w-full bg-black">
+          <img src="./screenshots/gpt5_redeemed.png" alt="Locked card and Toast POS banner" class="w-full h-auto object-cover max-h-[380px]">
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 text-xs text-neutral-400 max-w-4xl mx-auto w-full pt-1">
+          <div><strong class="text-neutral-200">Lockout Feedback:</strong> Card displays redemption timestamp and server name.</div>
+          <div><strong class="text-neutral-200">Toast Instruction:</strong> Prompts staff to apply <u>Wine Club: Grand Cru ($40)</u> discount.</div>
+          <div><strong class="text-neutral-200">Automatic Monthly Reset:</strong> Automatically resets on the 1st of every month at 1 AM.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="px-8 py-4 bg-[#1a1a1a] border-t border-neutral-800 flex items-center justify-between">
+      <button onclick="prevSlide()" class="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold tracking-wider uppercase transition-all" id="prevBtn">
+        &larr; Previous
+      </button>
+
+      <!-- Dots Indicator -->
+      <div class="flex items-center gap-2">
+        <button onclick="goToSlide(1)" class="w-2.5 h-2.5 rounded-full bg-emerald-400 transition-all dot" data-slide="1"></button>
+        <button onclick="goToSlide(2)" class="w-2.5 h-2.5 rounded-full bg-neutral-700 transition-all dot" data-slide="2"></button>
+        <button onclick="goToSlide(3)" class="w-2.5 h-2.5 rounded-full bg-neutral-700 transition-all dot" data-slide="3"></button>
+        <button onclick="goToSlide(4)" class="w-2.5 h-2.5 rounded-full bg-neutral-700 transition-all dot" data-slide="4"></button>
+        <button onclick="goToSlide(5)" class="w-2.5 h-2.5 rounded-full bg-neutral-700 transition-all dot" data-slide="5"></button>
+      </div>
+
+      <button onclick="nextSlide()" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold tracking-wider uppercase shadow transition-all" id="nextBtn">
+        Next &rarr;
+      </button>
+    </div>
+
+  </div>
+
+  <div class="text-xs text-neutral-500 mt-3 text-center">
+    Use &larr; and &rarr; arrow keys to navigate slides.
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 5;
+
+    function showSlide(n) {
+      if (n < 1) n = 1;
+      if (n > totalSlides) n = totalSlides;
+      currentSlide = n;
+
+      for (let i = 1; i <= totalSlides; i++) {
+        const slide = document.getElementById('slide-' + i);
+        if (slide) {
+          slide.classList.toggle('active', i === currentSlide);
+        }
+      }
+
+      document.querySelectorAll('.dot').forEach(dot => {
+        const slideNum = parseInt(dot.getAttribute('data-slide'));
+        if (slideNum === currentSlide) {
+          dot.classList.remove('bg-neutral-700');
+          dot.classList.add('bg-emerald-400');
+        } else {
+          dot.classList.remove('bg-emerald-400');
+          dot.classList.add('bg-neutral-700');
+        }
+      });
+
+      document.getElementById('slideNumber').textContent = `Slide ${currentSlide} of ${totalSlides}`;
+      document.getElementById('prevBtn').disabled = (currentSlide === 1);
+      document.getElementById('prevBtn').style.opacity = (currentSlide === 1) ? '0.4' : '1';
+      
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentSlide === totalSlides) {
+        nextBtn.textContent = 'Restart';
+      } else {
+        nextBtn.textContent = 'Next →';
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide === totalSlides) {
+        showSlide(1);
+      } else {
+        showSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    function goToSlide(n) {
+      showSlide(n);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+
+    showSlide(1);
+  </script>
+</body>
+</html>

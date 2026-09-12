@@ -1,0 +1,6 @@
+.vercel
+temp-chrome
+temp-profile
+node_modules
+*.log
+.DS_Store
