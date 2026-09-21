@@ -82,11 +82,11 @@ body{
 }
 
 .brand-text {
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
   color: var(--text);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .version-badge {
