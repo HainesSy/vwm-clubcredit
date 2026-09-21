@@ -909,10 +909,10 @@ function cardHtml(m) {
             <span class="benefit-label">Bar Tab Credit</span>
           </div>
           <div class="benefit-status ${isCreditAvail ? 'status-emerald' : 'status-muted'}">
-            ${isCreditAvail
+             ${isCreditAvail
               ? `<span class="benefit-badge badge-emerald">${amt} available</span>`
-              : `<span class="benefit-done">${amt} redeemed</span>`
-            }
+              : `<span class="benefit-done">Redeemed ${m.redeemedAt ? fmtShortDate(m.redeemedAt) : ''} ${m.redeemedBy ? `· ${esc(m.redeemedBy)}` : ''}</span>`
+             }
           </div>
         </div>
       </div>
@@ -939,11 +939,11 @@ function cardHtml(m) {
                </svg>
                <span>Redeem ${amt}</span>
              </button>`
-          : `<button type="button" class="action-btn btn-locked" disabled title="Bar tab credit already redeemed for this month">
+          : `<button type="button" class="action-btn btn-locked" disabled title="Redeemed ${m.redeemedAt ? fmtShortDate(m.redeemedAt) : 'this month'}${m.redeemedBy ? ` by ${m.redeemedBy}` : ''}">
                <svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                  <polyline points="20 6 9 17 4 12"/>
                </svg>
-               <span>Credit Redeemed</span>
+               <span>Redeemed${m.redeemedAt ? ` ${fmtShortDate(m.redeemedAt)}` : ''}${m.redeemedBy ? ` · ${esc(m.redeemedBy)}` : ''}</span>
              </button>`
         }
       </div>
@@ -1564,6 +1564,29 @@ function fmtTs(ts) {
            d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   } catch (e) {
     return String(ts);
+  }
+}
+
+function fmtShortDate(ts) {
+  if (!ts) return "";
+  try {
+    let d;
+    if (ts instanceof Date) {
+      d = ts;
+    } else if (typeof ts === "number") {
+      d = new Date(ts);
+    } else {
+      const str = String(ts).trim();
+      const sanitized = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(str)
+        ? str.replace(/\s+/, "T")
+        : str.replace(" ", "T");
+      d = new Date(sanitized);
+      if (isNaN(d.getTime())) d = new Date(str);
+    }
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } catch (e) {
+    return "";
   }
 }
 
