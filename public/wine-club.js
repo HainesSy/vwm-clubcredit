@@ -591,3 +591,41 @@ function fmtTs(ts) {
     return ts;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Prototype Version Switcher (V1 vs V2)
+// ---------------------------------------------------------------------------
+function toggleBrandDropdown(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById("brandDropdownMenu");
+  const btn = document.getElementById("brandDropdownBtn");
+  if (!menu) return;
+  const isHidden = menu.style.display === "none";
+  menu.style.display = isHidden ? "flex" : "none";
+  if (btn) btn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+}
+
+function closeBrandDropdown() {
+  const menu = document.getElementById("brandDropdownMenu");
+  const btn = document.getElementById("brandDropdownBtn");
+  if (menu) menu.style.display = "none";
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+function switchVersion(version, e) {
+  if (e) e.preventDefault();
+  closeBrandDropdown();
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (version === "v1") {
+    if (typeof returnToLanding === "function") returnToLanding();
+  } else if (version === "v2") {
+    window.location.href = isLocal ? "/membersearch/" : "/membersearch/";
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const container = document.getElementById("brandDropdownContainer");
+  if (container && !container.contains(e.target)) {
+    closeBrandDropdown();
+  }
+});

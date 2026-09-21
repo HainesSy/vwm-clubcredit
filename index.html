@@ -14,8 +14,37 @@
 
     <!-- Top bar -->
     <header class="topbar">
-      <div class="topbar-brand" onclick="returnToLanding()">
-        <span class="brand-text">Vintage Wine Merchants</span>
+      <div class="topbar-brand-dropdown" id="brandDropdownContainer">
+        <button type="button" class="topbar-brand-btn" id="brandDropdownBtn" onclick="toggleBrandDropdown(event)" aria-label="Select Prototype Version" aria-expanded="false">
+          <span class="brand-text">Vintage Wine Merchants</span>
+          <span class="version-badge">V1</span>
+          <svg class="brand-chevron" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+        <div class="brand-dropdown-menu" id="brandDropdownMenu" style="display:none;">
+          <div class="brand-dropdown-header">Prototype Versions</div>
+          <a href="#" onclick="switchVersion('v1', event)" class="brand-dropdown-item active" id="navItemV1">
+            <div class="dropdown-item-left">
+              <span class="dropdown-version-tag active">V1</span>
+              <div>
+                <div class="dropdown-item-title">Bar Credit Only</div>
+                <div class="dropdown-item-desc">Simple 3-sec monthly bar tab lookup ($15 / $40)</div>
+              </div>
+            </div>
+            <span class="dropdown-current-indicator">Current</span>
+          </a>
+          <a href="#" onclick="switchVersion('v2', event)" class="brand-dropdown-item" id="navItemV2">
+            <div class="dropdown-item-left">
+              <span class="dropdown-version-tag">V2</span>
+              <div>
+                <div class="dropdown-item-title">Member Search &amp; Pickups</div>
+                <div class="dropdown-item-desc">Bottle pickups + accumulating history + credit</div>
+              </div>
+            </div>
+          </a>
+        </div>
       </div>
       <div class="topbar-right">
         <span class="topbar-month" id="currentMonthText">September 2026</span>
