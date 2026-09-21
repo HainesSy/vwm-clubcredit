@@ -129,56 +129,79 @@ function handlePickup(payload) {
   if (!memberId) {
     return createJsonResponse({ success: false, error: "Missing memberId" });
   }
-  
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_MEMBERS);
-  let memberData = null;
-  
-  if (sheet) {
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      const rowId = String(data[i][0]).trim();
-      if (rowId.toLowerCase() === memberId.toLowerCase()) {
-        memberData = data[i];
-        break;
+
+  const lock = LockService.getScriptLock();
+  let lockAcquired = false;
+  try {
+    lockAcquired = lock.tryLock(30000);
+    if (!lockAcquired) {
+      return createJsonResponse({
+        success: false,
+        error: "Server busy processing another transaction. Please try again."
+      });
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_MEMBERS);
+    let memberData = null;
+    
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        const rowId = String(data[i][0]).trim();
+        if (rowId.toLowerCase() === memberId.toLowerCase()) {
+          memberData = data[i];
+          break;
+        }
       }
     }
+    
+    const now = new Date();
+    const timestampStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    
+    // Append to permanent Audit Log
+    let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
+    if (!auditSheet) {
+      auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
+      auditSheet.appendRow(["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"]);
+      auditSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e8f0fe");
+    }
+    
+    const memberName = memberData ? memberData[1] : ("Member " + memberId);
+    const memberTier = memberData ? memberData[4] : "Wine Club";
+    
+    auditSheet.appendRow([
+      timestampStr,
+      memberId,
+      memberName,
+      memberTier,
+      bottlesCount + " bottles",
+      store,
+      staff,
+      `Pickup months: [${months}] | ${notes}`
+    ]);
+
+    SpreadsheetApp.flush();
+    
+    return createJsonResponse({
+      success: true,
+      message: "Bottle pickup recorded successfully!",
+      memberId: memberId,
+      bottlesCount: bottlesCount,
+      months: months,
+      staff: staff,
+      timestamp: timestampStr
+    });
+  } catch (error) {
+    return createJsonResponse({
+      success: false,
+      error: error.toString()
+    });
+  } finally {
+    if (lockAcquired) {
+      lock.releaseLock();
+    }
   }
-  
-  const now = new Date();
-  const timestampStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
-  
-  // Append to permanent Audit Log
-  let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
-  if (!auditSheet) {
-    auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
-    auditSheet.appendRow(["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"]);
-    auditSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e8f0fe");
-  }
-  
-  const memberName = memberData ? memberData[1] : ("Member " + memberId);
-  const memberTier = memberData ? memberData[4] : "Wine Club";
-  
-  auditSheet.appendRow([
-    timestampStr,
-    memberId,
-    memberName,
-    memberTier,
-    bottlesCount + " bottles",
-    store,
-    staff,
-    `Pickup months: [${months}] | ${notes}`
-  ]);
-  
-  return createJsonResponse({
-    success: true,
-    message: "Bottle pickup recorded successfully!",
-    memberId: memberId,
-    bottlesCount: bottlesCount,
-    months: months,
-    staff: staff,
-    timestamp: timestampStr
-  });
 }
 
 /**
@@ -193,124 +216,185 @@ function handleRedemption(payload) {
   if (!memberId) {
     return createJsonResponse({ success: false, error: "Missing memberId" });
   }
-  
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_MEMBERS);
-  const data = sheet.getDataRange().getValues();
-  
-  let targetRow = -1;
-  let memberData = null;
-  
-  for (let i = 1; i < data.length; i++) {
-    const rowId = String(data[i][0]).trim();
-    if (rowId.toLowerCase() === memberId.toLowerCase()) {
-      targetRow = i + 1; // 1-indexed sheet row
-      memberData = data[i];
-      break;
+
+  const lock = LockService.getScriptLock();
+  let lockAcquired = false;
+  try {
+    lockAcquired = lock.tryLock(30000);
+    if (!lockAcquired) {
+      return createJsonResponse({
+        success: false,
+        error: "Server busy processing another transaction. Please try again."
+      });
     }
-  }
-  
-  if (targetRow === -1) {
-    return createJsonResponse({ success: false, error: "Member not found with ID: " + memberId });
-  }
-  
-  // Double-redemption check
-  const currentStatus = String(memberData[6] || "").toUpperCase().trim();
-  if (currentStatus === "REDEEMED") {
-    const prevDate = memberData[7] ? Utilities.formatDate(new Date(memberData[7]), Session.getScriptTimeZone(), "MMM d, h:mm a") : "earlier";
-    const prevStore = memberData[8] || "another store";
-    const prevStaff = memberData[9] || "staff";
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_MEMBERS);
+    if (!sheet) {
+      return createJsonResponse({ success: false, error: "Members sheet not found" });
+    }
+
+    // Always read fresh values AFTER acquiring script lock
+    const data = sheet.getDataRange().getValues();
+    
+    let targetRow = -1;
+    let memberData = null;
+    
+    for (let i = 1; i < data.length; i++) {
+      const rowId = String(data[i][0]).trim();
+      if (rowId.toLowerCase() === memberId.toLowerCase()) {
+        targetRow = i + 1; // 1-indexed sheet row
+        memberData = data[i];
+        break;
+      }
+    }
+    
+    if (targetRow === -1) {
+      return createJsonResponse({ success: false, error: "Member not found with ID: " + memberId });
+    }
+    
+    // Double-redemption check
+    const currentStatus = String(memberData[6] || "").toUpperCase().trim();
+    if (currentStatus === "REDEEMED") {
+      const prevDate = memberData[7] ? Utilities.formatDate(new Date(memberData[7]), Session.getScriptTimeZone(), "MMM d, h:mm a") : "earlier";
+      const prevStore = memberData[8] || "another store";
+      const prevStaff = memberData[9] || "staff";
+      
+      return createJsonResponse({
+        success: false,
+        alreadyRedeemed: true,
+        error: `Already redeemed on ${prevDate} at ${prevStore} by ${prevStaff}.`,
+        member: {
+          id: memberData[0],
+          name: memberData[1],
+          tier: memberData[4],
+          credit: memberData[5],
+          status: "REDEEMED",
+          redeemedAt: memberData[7] ? Utilities.formatDate(new Date(memberData[7]), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss") : "",
+          store: prevStore,
+          staff: prevStaff
+        }
+      });
+    }
+    
+    // Update the row with atomic batched write across columns G-J (7-10)
+    const now = new Date();
+    const timestampStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    
+    sheet.getRange(targetRow, 7, 1, 4).setValues([["REDEEMED", timestampStr, store, staff]]);
+    
+    // Append to permanent Audit Log
+    let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
+    if (!auditSheet) {
+      auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
+      auditSheet.appendRow(["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"]);
+      auditSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e8f0fe");
+    }
+    
+    auditSheet.appendRow([
+      timestampStr,
+      memberData[0], // ID
+      memberData[1], // Name
+      memberData[4], // Tier
+      memberData[5], // Credit
+      store,
+      staff,
+      notes
+    ]);
+
+    SpreadsheetApp.flush();
     
     return createJsonResponse({
-      success: false,
-      alreadyRedeemed: true,
-      error: `Already redeemed on ${prevDate} at ${prevStore} by ${prevStaff}.`
+      success: true,
+      message: "Benefit redeemed successfully!",
+      member: {
+        id: memberData[0],
+        name: memberData[1],
+        tier: memberData[4],
+        credit: memberData[5],
+        status: "REDEEMED",
+        redeemedAt: timestampStr,
+        store: store,
+        staff: staff
+      }
     });
-  }
-  
-  // Update the row
-  const now = new Date();
-  const timestampStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
-  
-  sheet.getRange(targetRow, 7).setValue("REDEEMED"); // Column G: Status_Current_Month
-  sheet.getRange(targetRow, 8).setValue(timestampStr); // Column H: Redeemed_At
-  sheet.getRange(targetRow, 9).setValue(store);        // Column I: Redeemed_Store
-  sheet.getRange(targetRow, 10).setValue(staff);       // Column J: Redeemed_By_Staff
-  
-  // Append to permanent Audit Log
-  let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
-  if (!auditSheet) {
-    auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
-    auditSheet.appendRow(["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"]);
-    auditSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e8f0fe");
-  }
-  
-  auditSheet.appendRow([
-    timestampStr,
-    memberData[0], // ID
-    memberData[1], // Name
-    memberData[4], // Tier
-    memberData[5], // Credit
-    store,
-    staff,
-    notes
-  ]);
-  
-  return createJsonResponse({
-    success: true,
-    message: "Benefit redeemed successfully!",
-    member: {
-      id: memberData[0],
-      name: memberData[1],
-      tier: memberData[4],
-      credit: memberData[5],
-      status: "REDEEMED",
-      redeemedAt: timestampStr,
-      store: store,
-      staff: staff
+  } catch (error) {
+    return createJsonResponse({
+      success: false,
+      error: error.toString()
+    });
+  } finally {
+    if (lockAcquired) {
+      lock.releaseLock();
     }
-  });
+  }
 }
 
 /**
  * Monthly Reset Function: Resets all member statuses on the 1st of every month
  */
 function monthlyReset() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_MEMBERS);
-  if (!sheet) return;
-  
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return;
-  
-  let resetCount = 0;
-  
-  for (let i = 1; i < data.length; i++) {
-    const rowNum = i + 1;
-    const currentStatus = String(data[i][6] || "").toUpperCase().trim();
+  const lock = LockService.getScriptLock();
+  let lockAcquired = false;
+  try {
+    lockAcquired = lock.tryLock(30000);
+    if (!lockAcquired) {
+      Logger.log("Could not acquire lock for monthlyReset.");
+      return -1;
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_MEMBERS);
+    if (!sheet) return -1;
     
-    if (currentStatus === "REDEEMED") {
-      sheet.getRange(rowNum, 7).setValue("AVAILABLE");
-      sheet.getRange(rowNum, 8).setValue("");
-      sheet.getRange(rowNum, 9).setValue("");
-      sheet.getRange(rowNum, 10).setValue("");
-      resetCount++;
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return 0;
+    
+    let resetCount = 0;
+    const statusValues = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      const currentStatus = String(data[i][6] || "").toUpperCase().trim();
+      
+      if (currentStatus === "REDEEMED") {
+        statusValues.push(["AVAILABLE", "", "", ""]);
+        resetCount++;
+      } else {
+        statusValues.push([data[i][6] || "AVAILABLE", data[i][7] || "", data[i][8] || "", data[i][9] || ""]);
+      }
+    }
+
+    // High-performance batched write: Updates all rows in a single RPC call instead of thousands
+    if (statusValues.length > 0) {
+      sheet.getRange(2, 7, statusValues.length, 4).setValues(statusValues);
+    }
+    
+    // Log reset to Audit Log
+    let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
+    if (auditSheet) {
+      const nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+      auditSheet.appendRow([nowStr, "SYSTEM", "Automated Monthly Reset", "All Tiers", 0, "All Stores", "Cron Trigger", `Reset ${resetCount} members`]);
+    }
+
+    SpreadsheetApp.flush();
+    
+    Logger.log(`Reset completed for ${resetCount} members.`);
+    return resetCount;
+  } finally {
+    if (lockAcquired) {
+      lock.releaseLock();
     }
   }
-  
-  // Log reset to Audit Log
-  let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
-  if (auditSheet) {
-    const nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
-    auditSheet.appendRow([nowStr, "SYSTEM", "Automated Monthly Reset", "All Tiers", 0, "All Stores", "Cron Trigger", `Reset ${resetCount} members`]);
-  }
-  
-  Logger.log(`Reset completed for ${resetCount} members.`);
-  return resetCount;
 }
 
 function handleManualMonthlyReset() {
   const count = monthlyReset();
+  if (count === -1) {
+    return createJsonResponse({
+      success: false,
+      error: "Server busy processing another transaction. Could not acquire lock for monthly reset."
+    });
+  }
   return createJsonResponse({
     success: true,
     message: `Monthly reset complete. ${count} members updated to AVAILABLE.`
@@ -339,7 +423,11 @@ function manualResetPrompt() {
   
   if (response === ui.Button.YES) {
     const count = monthlyReset();
-    ui.alert(`Reset complete! ${count} members are now AVAILABLE.`);
+    if (count === -1) {
+      ui.alert("⚠️ Reset Failed: Server busy processing another transaction. Please try again.");
+    } else {
+      ui.alert(`Reset complete! ${count} members are now AVAILABLE.`);
+    }
   }
 }
 
@@ -369,34 +457,42 @@ function installMonthlyTrigger() {
  * Initial sheet structure setup helper
  */
 function setupSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. Members Sheet
-  let sheet = ss.getSheetByName(SHEET_MEMBERS);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_MEMBERS);
+  const lock = LockService.getScriptLock();
+  let lockAcquired = false;
+  try {
+    lockAcquired = lock.tryLock(15000);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. Members Sheet
+    let sheet = ss.getSheetByName(SHEET_MEMBERS);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_MEMBERS);
+      const memberHeaders = [
+        "Member_ID", "Full_Name", "Phone", "Email", "Tier",
+        "Credit_Amount", "Status_Current_Month", "Redeemed_At",
+        "Redeemed_Store", "Redeemed_By_Staff", "Notes"
+      ];
+      sheet.getRange(1, 1, 1, memberHeaders.length).setValues([memberHeaders]);
+      sheet.getRange(1, 1, 1, memberHeaders.length).setFontWeight("bold").setBackground("#1a365d").setFontColor("#ffffff");
+      sheet.setFrozenRows(1);
+    }
+    
+    // 2. Audit Log Sheet
+    let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
+    if (!auditSheet) {
+      auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
+      const auditHeaders = ["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"];
+      auditSheet.getRange(1, 1, 1, auditHeaders.length).setValues([auditHeaders]);
+      auditSheet.getRange(1, 1, 1, auditHeaders.length).setFontWeight("bold").setBackground("#2c5282").setFontColor("#ffffff");
+      auditSheet.setFrozenRows(1);
+    }
+
+    SpreadsheetApp.flush();
+  } finally {
+    if (lockAcquired) {
+      lock.releaseLock();
+    }
   }
-  
-  const memberHeaders = [
-    "Member_ID", "Full_Name", "Phone", "Email", "Tier",
-    "Credit_Amount", "Status_Current_Month", "Redeemed_At",
-    "Redeemed_Store", "Redeemed_By_Staff", "Notes"
-  ];
-  
-  sheet.getRange(1, 1, 1, memberHeaders.length).setValues([memberHeaders]);
-  sheet.getRange(1, 1, 1, memberHeaders.length).setFontWeight("bold").setBackground("#1a365d").setFontColor("#ffffff");
-  sheet.setFrozenRows(1);
-  
-  // 2. Audit Log Sheet
-  let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
-  if (!auditSheet) {
-    auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
-  }
-  
-  const auditHeaders = ["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"];
-  auditSheet.getRange(1, 1, 1, auditHeaders.length).setValues([auditHeaders]);
-  auditSheet.getRange(1, 1, 1, auditHeaders.length).setFontWeight("bold").setBackground("#2c5282").setFontColor("#ffffff");
-  auditSheet.setFrozenRows(1);
 }
 
 /**

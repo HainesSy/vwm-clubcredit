@@ -4,6 +4,6 @@
   "description": "Wine Club Benefit Verifier",
   "scripts": {
     "start": "node local-server.js",
-    "test": "node test-verification.js"
+    "test": "node test-verification.js && node test-double-dip-prevention.js"
   }
 }

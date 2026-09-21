@@ -441,6 +441,22 @@ body {
   outline: none;
 }
 
+.chatgpt-search-input::-webkit-search-cancel-button,
+.chatgpt-search-input::-webkit-search-decoration,
+.chatgpt-search-input::-webkit-search-results-button,
+.chatgpt-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.chatgpt-search-input::-ms-clear,
+.chatgpt-search-input::-ms-reveal {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .chatgpt-search-input::placeholder {
   color: #737373;
 }

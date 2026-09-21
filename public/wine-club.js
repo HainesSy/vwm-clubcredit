@@ -56,10 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initDateDisplay();
   loadData();
 
-  // Background Google Sheets polling
+  // Background Google Sheets polling (15s interval for multi-store freshness)
   setInterval(() => {
     if (state.scriptUrl && !state.isSyncing) fetchFromGoogleSheets(true);
-  }, 45000);
+  }, 15000);
 });
 
 function initDateDisplay() {
@@ -126,23 +126,59 @@ function saveLocalMembers() {
   localStorage.setItem("wine_club_members_cache", JSON.stringify(state.members));
 }
 
+let currentSyncPromise = null;
+
 async function fetchFromGoogleSheets(isBackground = false) {
-  if (!state.scriptUrl) return;
+  if (!state.scriptUrl) return { success: false, error: "No script URL configured" };
+  if (currentSyncPromise) return currentSyncPromise;
+
   state.isSyncing = true;
-  try {
-    const res = await fetch(state.scriptUrl);
-    if (!res.ok) throw new Error("Network error");
-    const data = await res.json();
-    if (data.success && Array.isArray(data.members)) {
-      state.members = data.members;
-      saveLocalMembers();
-      if (state.viewMode === "results") renderMembers();
+  currentSyncPromise = (async () => {
+    try {
+      const res = await fetch(state.scriptUrl);
+      if (!res.ok) throw new Error(`Network response error: ${res.status}`);
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.members)) {
+        const existingMap = new Map(state.members.map(m => [m.id, m]));
+        const incomingIds = new Set();
+        const merged = data.members.map(incoming => {
+          incomingIds.add(incoming.id);
+          const existing = existingMap.get(incoming.id);
+          if (existing) {
+            // Overwrite protection: Never overwrite local REDEEMED status with incoming AVAILABLE
+            if (existing.status === "REDEEMED") {
+              incoming.status = "REDEEMED";
+              incoming.redeemedAt = existing.redeemedAt || incoming.redeemedAt;
+              incoming.redeemedBy = existing.redeemedBy || incoming.redeemedBy;
+              incoming.redeemedStore = existing.redeemedStore || incoming.redeemedStore;
+            }
+          }
+          return incoming;
+        });
+
+        const preservedLocal = state.members.filter(m => !incomingIds.has(m.id));
+        state.members = [...merged, ...preservedLocal];
+
+        if (state.selectedMember) {
+          const fresh = state.members.find(x => x.id === state.selectedMember.id);
+          if (fresh) state.selectedMember = fresh;
+        }
+
+        saveLocalMembers();
+        if (state.viewMode === "results") renderMembers();
+        return { success: true, members: state.members };
+      }
+      return { success: false, error: data ? data.error : "Invalid response format" };
+    } catch (err) {
+      console.warn("Sheets sync failed:", err);
+      return { success: false, error: err };
+    } finally {
+      state.isSyncing = false;
+      currentSyncPromise = null;
     }
-  } catch (err) {
-    console.warn("Sheets sync failed:", err);
-  } finally {
-    state.isSyncing = false;
-  }
+  })();
+
+  return currentSyncPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -368,9 +404,74 @@ function cardHtml(m) {
 // ---------------------------------------------------------------------------
 // Redemption Modal Flow (Server Name selection at the end)
 // ---------------------------------------------------------------------------
-function promptRedeem(id) {
-  const m = state.members.find(x => x.id === id);
-  if (!m || m.status === "REDEEMED") return;
+async function promptRedeem(id) {
+  let m = state.members.find(x => x.id === id);
+  if (!m) return;
+
+  if (m.status === "REDEEMED") {
+    const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+    const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+    const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+    if (typeof alert === "function") alert(`⚠️ Already Redeemed!\n${m.name}'s credit was already redeemed ${dateStr}${staffStr}${storeStr}.`);
+    return;
+  }
+
+  // Prevent concurrent / rapid double-clicks while verifying
+  if (state.isVerifying) return;
+
+  // Live freshness check before opening modal if Google Sheet backend is configured
+  if (state.scriptUrl) {
+    state.isVerifying = true;
+    const cardBtn = document.querySelector ? document.querySelector(`#card-${id} .action-btn.active, #card-${id} .action-btn`) : null;
+    let origText = "";
+    if (cardBtn) {
+      origText = cardBtn.textContent;
+      cardBtn.disabled = true;
+      cardBtn.textContent = "Verifying status...";
+    }
+
+    try {
+      const syncResult = await fetchFromGoogleSheets();
+      if (!syncResult || !syncResult.success) {
+        throw new Error(syncResult && syncResult.error ? syncResult.error : "Live check failed");
+      }
+    } catch (err) {
+      if (cardBtn) {
+        cardBtn.disabled = false;
+        cardBtn.textContent = origText;
+      }
+      state.isVerifying = false;
+      const connErr = "⚠️ Connection Error: Unable to verify live member status with Google Sheet. Please check your internet connection before redeeming.";
+      if (typeof alert === "function") alert(connErr);
+      return;
+    } finally {
+      state.isVerifying = false;
+    }
+
+    if (cardBtn) {
+      cardBtn.disabled = false;
+      cardBtn.textContent = origText;
+    }
+
+    // Re-verify status from fresh sheet data
+    m = state.members.find(x => x.id === id);
+    if (!m) {
+      if (typeof alert === "function") alert("⚠️ Member no longer found in system.");
+      renderMembers();
+      return;
+    }
+
+    if (m.status === "REDEEMED") {
+      const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+      const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+      const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+      saveLocalMembers();
+      renderMembers();
+      const alertMsg = `⚠️ Already Redeemed!\n${m.name}'s bar credit was already redeemed ${dateStr}${staffStr}${storeStr} at another store.`;
+      if (typeof alert === "function") alert(alertMsg);
+      return;
+    }
+  }
 
   state.selectedMember = m;
   const amt = `$${Number(m.creditAmount).toFixed(0)}`;
@@ -416,6 +517,21 @@ async function executeRedemption() {
   const m = state.selectedMember;
   if (!m) return;
 
+  // Double-check local status in case background sync updated member to REDEEMED while modal was open
+  if (m.status === "REDEEMED") {
+    closeConfirmModal();
+    renderMembers();
+    const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+    const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+    const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+    if (typeof alert === "function") alert(`⚠️ Already Redeemed!\n${m.name}'s bar credit was already redeemed ${dateStr}${staffStr}${storeStr}.`);
+    return;
+  }
+
+  // Prevent concurrent redemption executions
+  if (state.isRedeeming) return;
+  state.isRedeeming = true;
+
   const staffSelect = document.getElementById("confirmStaffSelect");
   const serverName = staffSelect ? staffSelect.value : (state.staffList[0] || "Haines S.");
   const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
@@ -426,44 +542,101 @@ async function executeRedemption() {
     btn.textContent = "Processing...";
   }
 
-  // 1. Google Sheets sync if connected
-  if (state.scriptUrl) {
-    try {
-      const res = await fetch(state.scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "redeem", memberId: m.id, staff: serverName, notes: "iPad Verifier" })
-      });
-      const data = await res.json();
+  try {
+    // 1. Google Sheets sync if connected
+    if (state.scriptUrl) {
+      let res;
+      try {
+        res = await fetch(state.scriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "redeem", memberId: m.id, staff: serverName, notes: "iPad Verifier" })
+        });
+      } catch (netErr) {
+        console.error("Redemption sync failed:", netErr);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const errorMsg = `⚠️ Redemption Blocked (Offline / Network Error)\nCannot reach Google Sheet backend: ${netErr.message || netErr}\n\nTo prevent double-spending across stores, redemptions cannot proceed offline when Google Sheet sync is enabled. Check internet connection and try again.`;
+        if (typeof alert === "function") alert(errorMsg);
+        return;
+      }
+
+      if (!res.ok) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const httpMsg = `⚠️ Redemption Blocked (HTTP ${res.status})\nFailed to reach Google Sheet server. Please check your internet connection and try again.`;
+        if (typeof alert === "function") alert(httpMsg);
+        return;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        if (typeof alert === "function") alert("⚠️ Invalid Server Response: Unable to parse backend response.");
+        return;
+      }
+
       if (!data.success) {
         if (data.alreadyRedeemed) {
-          alert(`⚠️ Already redeemed!\n${data.error}`);
+          m.status = "REDEEMED";
+          if (data.member) {
+            if (data.member.redeemedAt) m.redeemedAt = data.member.redeemedAt;
+            if (data.member.staff || data.member.redeemedBy) m.redeemedBy = data.member.staff || data.member.redeemedBy;
+            if (data.member.store || data.member.redeemedStore) m.redeemedStore = data.member.store || data.member.redeemedStore;
+          }
+          saveLocalMembers();
           closeConfirmModal();
           fetchFromGoogleSheets();
+          renderMembers();
+          if (typeof alert === "function") alert(`⚠️ Already redeemed!\n${data.error || "This benefit was already redeemed at another store."}`);
           return;
         }
-        throw new Error(data.error);
+
+        // Backend returned specific error (e.g. server busy lock timeout or member not found)
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const isBusy = (data.error || "").toLowerCase().includes("busy");
+        const title = isBusy ? "⚠️ Server Busy" : "⚠️ Redemption Error";
+        const extra = isBusy ? "\n\nThe server is processing another transaction. Please tap Redeem credit again in a few seconds." : "";
+        if (typeof alert === "function") alert(`${title}\n${data.error || "Redemption rejected by Google Sheets"}${extra}`);
+        return;
       }
-    } catch (err) {
-      console.warn("Server sync error (saved locally):", err);
+
+      if (data.member) {
+        if (data.member.redeemedAt) m.redeemedAt = data.member.redeemedAt;
+        if (data.member.staff || data.member.redeemedBy) m.redeemedBy = data.member.staff || data.member.redeemedBy;
+        if (data.member.store || data.member.redeemedStore) m.redeemedStore = data.member.store || data.member.redeemedStore;
+      }
     }
-  }
 
-  // 2. Update local state
-  m.status = "REDEEMED";
-  m.redeemedAt = ts;
-  m.redeemedBy = serverName;
+    // 2. Update local state
+    m.status = "REDEEMED";
+    m.redeemedAt = m.redeemedAt || ts;
+    m.redeemedBy = m.redeemedBy || serverName;
 
-  saveLocalMembers();
-  closeConfirmModal();
-  renderMembers();
+    saveLocalMembers();
+    closeConfirmModal();
+    renderMembers();
 
-  // 3. Show Toast POS Reminder Notification
-  showToastPosAlert(m);
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "Redeem credit";
+    // 3. Show Toast POS Reminder Notification
+    showToastPosAlert(m);
+  } finally {
+    state.isRedeeming = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Redeem credit";
+    }
   }
 }
 

@@ -4,3 +4,5 @@ temp-profile
 node_modules
 *.log
 .DS_Store
+products.csv
+items_incorrectly_in_750ml_collection.txt

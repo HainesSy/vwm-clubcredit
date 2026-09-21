@@ -465,9 +465,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initActiveServerSelector();
   loadData();
 
+  // Background Google Sheets polling (15s interval for multi-store freshness)
   setInterval(() => {
     if (state.scriptUrl && !state.isSyncing) fetchFromGoogleSheets(true);
-  }, 45000);
+  }, 15000);
 });
 
 function initDateDisplay() {
@@ -541,72 +542,85 @@ function saveLocalMembers() {
   localStorage.setItem("vwm_search_members_cache", JSON.stringify(state.members));
 }
 
+let currentSyncPromise = null;
+
 async function fetchFromGoogleSheets(isBackground = false) {
-  if (!state.scriptUrl) return;
+  if (!state.scriptUrl) return { success: false, error: "No script URL configured" };
+  if (currentSyncPromise) return currentSyncPromise;
+
   state.isSyncing = true;
-  try {
-    const res = await fetch(state.scriptUrl);
-    if (!res.ok) throw new Error("Network error");
-    const data = await res.json();
-    if (data.success && Array.isArray(data.members)) {
-      const existingMap = new Map(state.members.map(m => [m.id, m]));
-      const incomingIds = new Set();
-      const merged = data.members.map(incoming => {
-        incomingIds.add(incoming.id);
-        const existing = existingMap.get(incoming.id);
-        if (existing) {
-          // 1. Data Sync Overwrite Protection: Never overwrite local REDEEMED status with AVAILABLE
-          if (existing.status === "REDEEMED") {
-            incoming.status = "REDEEMED";
-            incoming.redeemedAt = existing.redeemedAt || incoming.redeemedAt;
-            incoming.redeemedBy = existing.redeemedBy || incoming.redeemedBy;
-          }
-          // 2. Data Sync Overwrite Protection: Preserve local bottle pickup records
-          if (existing.pickupHistory && existing.pickupHistory.length > 0) {
-            if (!incoming.pickupHistory || !incoming.pickupHistory.length) {
-              incoming.pickupHistory = existing.pickupHistory;
-              incoming.pickupStatus = existing.pickupStatus;
-              incoming.pickedUpAt = existing.pickedUpAt;
-              incoming.pickedUpBy = existing.pickedUpBy;
-            } else {
-              const existingHistMap = new Map(existing.pickupHistory.map(h => [h.month, h]));
-              incoming.pickupHistory = incoming.pickupHistory.map(inH => {
-                const exH = existingHistMap.get(inH.month);
-                if (exH && exH.status === "PICKED_UP" && inH.status !== "PICKED_UP") {
-                  return exH;
-                }
-                return inH;
-              });
-              const hasPending = incoming.pickupHistory.some(h => h.status === "PENDING");
-              incoming.pickupStatus = hasPending ? "READY" : "PICKED_UP";
-              if (existing.pickedUpAt && (!incoming.pickedUpAt || existing.pickupStatus === "PICKED_UP")) {
+  currentSyncPromise = (async () => {
+    try {
+      const res = await fetch(state.scriptUrl);
+      if (!res.ok) throw new Error(`Network response error: ${res.status}`);
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.members)) {
+        const existingMap = new Map(state.members.map(m => [m.id, m]));
+        const incomingIds = new Set();
+        const merged = data.members.map(incoming => {
+          incomingIds.add(incoming.id);
+          const existing = existingMap.get(incoming.id);
+          if (existing) {
+            // 1. Data Sync Overwrite Protection: Never overwrite local REDEEMED status with AVAILABLE
+            if (existing.status === "REDEEMED") {
+              incoming.status = "REDEEMED";
+              incoming.redeemedAt = existing.redeemedAt || incoming.redeemedAt;
+              incoming.redeemedBy = existing.redeemedBy || incoming.redeemedBy;
+              incoming.redeemedStore = existing.redeemedStore || incoming.redeemedStore;
+            }
+            // 2. Data Sync Overwrite Protection: Preserve local bottle pickup records
+            if (existing.pickupHistory && existing.pickupHistory.length > 0) {
+              if (!incoming.pickupHistory || !incoming.pickupHistory.length) {
+                incoming.pickupHistory = existing.pickupHistory;
+                incoming.pickupStatus = existing.pickupStatus;
                 incoming.pickedUpAt = existing.pickedUpAt;
                 incoming.pickedUpBy = existing.pickedUpBy;
+              } else {
+                const existingHistMap = new Map(existing.pickupHistory.map(h => [h.month, h]));
+                incoming.pickupHistory = incoming.pickupHistory.map(inH => {
+                  const exH = existingHistMap.get(inH.month);
+                  if (exH && exH.status === "PICKED_UP" && inH.status !== "PICKED_UP") {
+                    return exH;
+                  }
+                  return inH;
+                });
+                const hasPending = incoming.pickupHistory.some(h => h.status === "PENDING");
+                incoming.pickupStatus = hasPending ? "READY" : "PICKED_UP";
+                if (existing.pickedUpAt && (!incoming.pickedUpAt || existing.pickupStatus === "PICKED_UP")) {
+                  incoming.pickedUpAt = existing.pickedUpAt;
+                  incoming.pickedUpBy = existing.pickedUpBy;
+                }
               }
             }
           }
+          return normalizeMember(incoming);
+        });
+
+        // Preserve existing local members not included in partial incoming sheet data
+        const preservedLocalMembers = state.members.filter(m => !incomingIds.has(m.id));
+        state.members = [...merged, ...preservedLocalMembers];
+
+        // Keep active selectedMember reference in sync with freshly merged array
+        if (state.selectedMember) {
+          const freshSelected = state.members.find(x => x.id === state.selectedMember.id);
+          if (freshSelected) state.selectedMember = freshSelected;
         }
-        return normalizeMember(incoming);
-      });
 
-      // Preserve existing local members not included in partial incoming sheet data
-      const preservedLocalMembers = state.members.filter(m => !incomingIds.has(m.id));
-      state.members = [...merged, ...preservedLocalMembers];
-
-      // Keep active selectedMember reference in sync with freshly merged array
-      if (state.selectedMember) {
-        const freshSelected = state.members.find(x => x.id === state.selectedMember.id);
-        if (freshSelected) state.selectedMember = freshSelected;
+        saveLocalMembers();
+        if (state.viewMode === "results") renderMembers();
+        return { success: true, members: state.members };
       }
-
-      saveLocalMembers();
-      if (state.viewMode === "results") renderMembers();
+      return { success: false, error: data ? data.error : "Invalid response format" };
+    } catch (err) {
+      console.warn("Sheets sync failed:", err);
+      return { success: false, error: err };
+    } finally {
+      state.isSyncing = false;
+      currentSyncPromise = null;
     }
-  } catch (err) {
-    console.warn("Sheets sync failed:", err);
-  } finally {
-    state.isSyncing = false;
-  }
+  })();
+
+  return currentSyncPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -1289,9 +1303,100 @@ async function executePickup() {
 // ---------------------------------------------------------------------------
 // Bar Credit Redemption Flow
 // ---------------------------------------------------------------------------
-function promptRedeem(id) {
-  const m = state.members.find(x => x.id === id);
-  if (!m || m.status === "REDEEMED") return;
+async function promptRedeem(id) {
+  let m = state.members.find(x => x.id === id);
+  if (!m) return;
+
+  if (m.status === "REDEEMED") {
+    const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+    const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+    const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+    const alertMsg = `⚠️ Already Redeemed!\n${m.name}'s bar credit was already redeemed ${dateStr}${staffStr}${storeStr}.`;
+    if (typeof alert === "function") alert(alertMsg);
+    if (typeof showToastNotification === "function") {
+      showToastNotification("Already Redeemed", `${m.name}'s credit was already used ${dateStr}${staffStr}`);
+    }
+    return;
+  }
+
+  // Prevent concurrent / rapid double-clicks while verifying
+  if (state.isVerifying) return;
+
+  // Live freshness check before opening modal if Google Sheet backend is configured
+  if (state.scriptUrl) {
+    state.isVerifying = true;
+    const cardBtn = document.querySelector ? document.querySelector(`#card-${id} .btn-credit, #card-${id} .action-btn`) : null;
+    const btnSpan = cardBtn ? cardBtn.querySelector('span') : null;
+    let origHtml = "";
+    let origText = "";
+    if (cardBtn) {
+      origHtml = cardBtn.innerHTML;
+      cardBtn.disabled = true;
+      if (btnSpan) {
+        origText = btnSpan.textContent;
+        btnSpan.textContent = "Verifying...";
+      } else {
+        origText = cardBtn.textContent;
+        cardBtn.textContent = "Verifying status...";
+      }
+    }
+
+    try {
+      const syncResult = await fetchFromGoogleSheets();
+      if (!syncResult || !syncResult.success) {
+        throw new Error(syncResult && syncResult.error ? syncResult.error : "Live check failed");
+      }
+    } catch (err) {
+      if (cardBtn) {
+        cardBtn.disabled = false;
+        if (origHtml) {
+          cardBtn.innerHTML = origHtml;
+        } else {
+          cardBtn.textContent = origText;
+        }
+      }
+      state.isVerifying = false;
+      const connErr = "⚠️ Connection Error: Unable to verify live member status with Google Sheet. Please check internet connection before redeeming.";
+      if (typeof alert === "function") alert(connErr);
+      if (typeof showToastNotification === "function") {
+        showToastNotification("Connection Error", "Cannot verify credit status with Google Sheet");
+      }
+      return;
+    } finally {
+      state.isVerifying = false;
+    }
+
+    if (cardBtn) {
+      cardBtn.disabled = false;
+      if (origHtml) {
+        cardBtn.innerHTML = origHtml;
+      } else {
+        cardBtn.textContent = origText;
+      }
+    }
+
+    // Re-verify status from fresh sheet data
+    m = state.members.find(x => x.id === id);
+    if (!m) {
+      if (typeof alert === "function") alert("⚠️ Member no longer found in system.");
+      renderMembers();
+      return;
+    }
+
+    if (m.status === "REDEEMED") {
+      const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+      const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+      const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+      saveLocalMembers();
+      renderMembers();
+      const alertMsg = `⚠️ Already Redeemed!\n${m.name}'s bar credit was already redeemed ${dateStr}${staffStr}${storeStr} at another store.`;
+      if (typeof alert === "function") alert(alertMsg);
+      if (typeof showToastNotification === "function") {
+        showToastNotification("Already Redeemed", `${m.name}'s credit was already used ${dateStr}${staffStr}`);
+      }
+      return;
+    }
+  }
 
   state.selectedMember = m;
   state.selectedStaff = state.activeServer || (state.staffList[0] || "Haines S.");
@@ -1355,6 +1460,25 @@ async function executeRedemption() {
   const m = (state.selectedMember && state.members.find(x => x.id === state.selectedMember.id)) || state.selectedMember;
   if (!m) return;
 
+  // Double-check local status in case background sync updated member to REDEEMED while modal was open
+  if (m.status === "REDEEMED") {
+    closeConfirmModal();
+    renderMembers();
+    const dateStr = m.redeemedAt ? fmtTs(m.redeemedAt) : "earlier this month";
+    const staffStr = m.redeemedBy ? ` by ${m.redeemedBy}` : "";
+    const storeStr = m.redeemedStore ? ` at ${m.redeemedStore}` : "";
+    const alertMsg = `⚠️ Already Redeemed!\n${m.name}'s bar credit was already redeemed ${dateStr}${staffStr}${storeStr}.`;
+    if (typeof alert === "function") alert(alertMsg);
+    if (typeof showToastNotification === "function") {
+      showToastNotification("Already Redeemed", `${m.name}'s credit was already used ${dateStr}${staffStr}`);
+    }
+    return;
+  }
+
+  // Prevent concurrent redemption executions
+  if (state.isRedeeming) return;
+  state.isRedeeming = true;
+
   const serverName = state.selectedStaff || state.activeServer || (state.staffList[0] || "Haines S.");
   const ts = getLocalTimestamp();
 
@@ -1364,38 +1488,112 @@ async function executeRedemption() {
     btn.textContent = "Processing...";
   }
 
-  if (state.scriptUrl) {
-    try {
-      const res = await fetch(state.scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "redeem", memberId: m.id, staff: serverName, notes: "iPad Verifier" })
-      });
-      const data = await res.json();
-      if (!data.success && data.alreadyRedeemed) {
-        alert(`Already redeemed!\n${data.error}`);
-        closeConfirmModal();
-        fetchFromGoogleSheets();
+  try {
+    if (state.scriptUrl) {
+      let res;
+      try {
+        res = await fetch(state.scriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "redeem", memberId: m.id, staff: serverName, notes: "iPad Verifier" })
+        });
+      } catch (netErr) {
+        console.error("Redemption sync failed:", netErr);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const errorMsg = `⚠️ Redemption Blocked (Offline / Network Error)\nCannot reach Google Sheet backend: ${netErr.message || netErr}\n\nTo prevent double-spending across stores, redemptions cannot proceed offline when Google Sheet sync is enabled. Check internet connection and try again.`;
+        if (typeof alert === "function") alert(errorMsg);
+        if (typeof showToastNotification === "function") {
+          showToastNotification("Redemption Blocked", "Offline / Network error. Credit not redeemed.");
+        }
         return;
       }
-    } catch (err) {
-      console.warn("Server sync error (saved locally):", err);
+
+      if (!res.ok) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const httpMsg = `⚠️ Redemption Blocked (HTTP ${res.status})\nFailed to reach Google Sheet server. Please check your internet connection and try again.`;
+        if (typeof alert === "function") alert(httpMsg);
+        if (typeof showToastNotification === "function") {
+          showToastNotification("Server Error", `HTTP ${res.status}`);
+        }
+        return;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const parseErr = `⚠️ Invalid Server Response: Unable to parse backend response.`;
+        if (typeof alert === "function") alert(parseErr);
+        return;
+      }
+
+      if (!data.success) {
+        if (data.alreadyRedeemed) {
+          m.status = "REDEEMED";
+          if (data.member) {
+            if (data.member.redeemedAt) m.redeemedAt = data.member.redeemedAt;
+            if (data.member.staff || data.member.redeemedBy) m.redeemedBy = data.member.staff || data.member.redeemedBy;
+            if (data.member.store || data.member.redeemedStore) m.redeemedStore = data.member.store || data.member.redeemedStore;
+          }
+          saveLocalMembers();
+          closeConfirmModal();
+          fetchFromGoogleSheets();
+          renderMembers();
+          const alreadyMsg = `⚠️ Already Redeemed!\n${data.error || "This benefit was already redeemed at another store."}`;
+          if (typeof alert === "function") alert(alreadyMsg);
+          if (typeof showToastNotification === "function") {
+            showToastNotification("Already Redeemed", data.error || "Credit already redeemed");
+          }
+          return;
+        }
+
+        // Server returned error (e.g. server busy lock timeout or member not found)
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Redeem credit";
+        }
+        const isBusy = (data.error || "").toLowerCase().includes("busy");
+        const title = isBusy ? "⚠️ Server Busy" : "⚠️ Redemption Error";
+        const extra = isBusy ? "\n\nThe server is processing another transaction. Please tap Redeem credit again in a few seconds." : "";
+        if (typeof alert === "function") alert(`${title}\n${data.error || "Redemption rejected by Google Sheets"}${extra}`);
+        if (typeof showToastNotification === "function") {
+          showToastNotification(isBusy ? "Server Busy" : "Redemption Error", data.error || "Redemption rejected");
+        }
+        return;
+      }
+
+      if (data.member) {
+        if (data.member.redeemedAt) m.redeemedAt = data.member.redeemedAt;
+        if (data.member.staff || data.member.redeemedBy) m.redeemedBy = data.member.staff || data.member.redeemedBy;
+        if (data.member.store || data.member.redeemedStore) m.redeemedStore = data.member.store || data.member.redeemedStore;
+      }
     }
-  }
 
-  m.status = "REDEEMED";
-  m.redeemedAt = ts;
-  m.redeemedBy = serverName;
+    m.status = "REDEEMED";
+    m.redeemedAt = m.redeemedAt || ts;
+    m.redeemedBy = m.redeemedBy || serverName;
 
-  saveLocalMembers();
-  closeConfirmModal();
-  renderMembers();
+    saveLocalMembers();
+    closeConfirmModal();
+    renderMembers();
 
-  showToastPosAlert(m);
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "Redeem credit";
+    showToastPosAlert(m);
+  } finally {
+    state.isRedeeming = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Redeem credit";
+    }
   }
 }
 
