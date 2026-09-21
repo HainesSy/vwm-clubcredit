@@ -55,6 +55,13 @@ const SERVER_NAMES = [
   "Matt G."
 ];
 
+const HISTORICAL_PICKUP_DATES = {
+  "2026-06": { date: "2026-06-18 15:42:00", staff: "Nancy J." },
+  "2026-07": { date: "2026-07-14 11:20:00", staff: "Harry F." },
+  "2026-08": { date: "2026-08-11 16:35:00", staff: "John M." },
+  "2026-09": { date: "2026-09-08 14:15:00", staff: "Haines S." }
+};
+
 function makePickupHistory(tier, pendingMonthList) {
   const months = ["2026-06", "2026-07", "2026-08", "2026-09"];
   const isGrand = (tier || "").toLowerCase().includes("grand");
@@ -63,12 +70,13 @@ function makePickupHistory(tier, pendingMonthList) {
   return months.map(m => {
     const isPending = pendingMonthList.includes(m);
     const wines = (WINE_CATALOG[m] && WINE_CATALOG[m][tierKey]) ? [...WINE_CATALOG[m][tierKey]] : [];
+    const defaultHist = HISTORICAL_PICKUP_DATES[m] || { date: "2026-09-02 14:30:00", staff: "Haines S." };
     return {
       month: m,
       status: isPending ? "PENDING" : "PICKED_UP",
       wines: wines,
-      pickedUpAt: isPending ? "" : "2026-09-02 14:30:00",
-      pickedUpBy: isPending ? "" : "Haines S."
+      pickedUpAt: isPending ? "" : defaultHist.date,
+      pickedUpBy: isPending ? "" : defaultHist.staff
     };
   });
 }
@@ -317,8 +325,50 @@ const INITIAL_DEMO_MEMBERS = [
 ];
 
 function getInitialStaff() {
+  const saved = localStorage.getItem("vwm_search_staff_list");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch (e) {}
+  }
   localStorage.setItem("vwm_search_staff_list", JSON.stringify(SERVER_NAMES));
   return [...SERVER_NAMES];
+}
+
+function normalizeMember(m) {
+  if (!m || typeof m !== "object") return m;
+  const isGrand = (m.tier || "").toLowerCase().includes("grand");
+  if (!m.creditAmount) {
+    m.creditAmount = isGrand ? 40 : 15;
+  }
+  if (!m.status) {
+    m.status = "AVAILABLE";
+  }
+
+  const tierKey = isGrand ? "Grand Cru Club" : "Value Club";
+
+  if (!Array.isArray(m.pickupHistory) || m.pickupHistory.length === 0) {
+    const isReady = (m.pickupStatus || "").toUpperCase() === "READY" || !m.pickupStatus;
+    const pendingMonths = isReady ? ["2026-09"] : [];
+    m.pickupHistory = makePickupHistory(m.tier, pendingMonths);
+  } else {
+    m.pickupHistory.forEach(h => {
+      if (!h.wines || !h.wines.length) {
+        h.wines = (WINE_CATALOG[h.month] && WINE_CATALOG[h.month][tierKey]) ? [...WINE_CATALOG[h.month][tierKey]] : [];
+      }
+      if (!h.status) {
+        h.status = "PENDING";
+      }
+    });
+  }
+
+  const hasPending = m.pickupHistory.some(h => h.status === "PENDING");
+  m.pickupStatus = hasPending ? "READY" : "PICKED_UP";
+
+  return m;
 }
 
 // ---------------------------------------------------------------------------
@@ -351,8 +401,12 @@ document.addEventListener("DOMContentLoaded", () => {
 function initDateDisplay() {
   const el = document.getElementById("currentMonthText");
   if (el) {
-    el.textContent = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    el.textContent = getCurrentMonthName();
   }
+}
+
+function getCurrentMonthName() {
+  return new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 // ---------------------------------------------------------------------------
@@ -363,19 +417,18 @@ function loadData() {
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].pickupHistory) {
-        state.members = parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        state.members = parsed.map(m => normalizeMember(m));
       } else {
-        // Upgrade legacy cache structure
-        state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+        state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS)).map(m => normalizeMember(m));
         saveLocalMembers();
       }
     } catch (e) {
-      state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+      state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS)).map(m => normalizeMember(m));
       saveLocalMembers();
     }
   } else {
-    state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+    state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS)).map(m => normalizeMember(m));
     saveLocalMembers();
   }
 
@@ -420,7 +473,20 @@ async function fetchFromGoogleSheets(isBackground = false) {
     if (!res.ok) throw new Error("Network error");
     const data = await res.json();
     if (data.success && Array.isArray(data.members)) {
-      state.members = data.members;
+      const existingMap = new Map(state.members.map(m => [m.id, m]));
+      const merged = data.members.map(incoming => {
+        const existing = existingMap.get(incoming.id);
+        if (existing && existing.pickupHistory && existing.pickupHistory.length > 0) {
+          if (!incoming.pickupHistory || !incoming.pickupHistory.length) {
+            incoming.pickupHistory = existing.pickupHistory;
+            incoming.pickupStatus = existing.pickupStatus;
+            incoming.pickedUpAt = existing.pickedUpAt;
+            incoming.pickedUpBy = existing.pickedUpBy;
+          }
+        }
+        return normalizeMember(incoming);
+      });
+      state.members = merged;
       saveLocalMembers();
       if (state.viewMode === "results") renderMembers();
     }
@@ -691,8 +757,8 @@ function cardHtml(m) {
             </div>
             <div class="status-row-secondary">
               ${isCreditAvail
-                ? `Use-it-or-lose-it for September 2026`
-                : (m.redeemedAt ? `Redeemed ${fmtTs(m.redeemedAt)} by ${esc(m.redeemedBy || 'staff')}` : 'Redeemed for September 2026')
+                ? `Use-it-or-lose-it for ${getCurrentMonthName()}`
+                : (m.redeemedAt ? `Redeemed ${fmtTs(m.redeemedAt)} by ${esc(m.redeemedBy || 'staff')}` : `Redeemed for ${getCurrentMonthName()}`)
               }
             </div>
           </div>
@@ -704,13 +770,14 @@ function cardHtml(m) {
           type="button" 
           class="action-btn ${pendingCount > 0 ? 'active pickup-btn' : 'btn-dim'}" 
           onclick="promptPickup('${m.id}')"
+          title="${pendingCount > 0 ? `View ${pendingBottles} bottles ready for pickup` : 'View previous pickup history'}"
         >
           ${pendingCount > 0 ? `View Bottles (${pendingBottles})` : 'Bottle History'}
         </button>
 
         ${isCreditAvail
-          ? `<button type="button" class="action-btn active credit-btn" onclick="promptRedeem('${m.id}')">Redeem ${amt}</button>`
-          : `<button type="button" class="action-btn locked" disabled>Credit Redeemed</button>`
+          ? `<button type="button" class="action-btn active credit-btn" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem Credit</button>`
+          : `<button type="button" class="action-btn locked" disabled title="Bar tab credit already redeemed for this month">Credit Redeemed</button>`
         }
       </div>
     </div>
@@ -726,8 +793,13 @@ function promptPickup(id) {
 
   state.selectedMember = m;
   const history = m.pickupHistory || [];
-  const pending = history.filter(h => h.status === "PENDING");
-  const pickedUp = history.filter(h => h.status === "PICKED_UP");
+  // Sort descending: newest / current month at top
+  const pending = history
+    .filter(h => h.status === "PENDING")
+    .sort((a, b) => b.month.localeCompare(a.month));
+  const pickedUp = history
+    .filter(h => h.status === "PICKED_UP")
+    .sort((a, b) => b.month.localeCompare(a.month));
 
   // Pre-check all pending months by default for easy bulk pickup
   state.selectedPickupMonths = new Set(pending.map(h => h.month));
@@ -788,7 +860,7 @@ function promptPickup(id) {
       return `
         <div class="pickup-month-card ${isChecked ? 'is-selected' : ''}" id="pickupCard_${h.month}" onclick="handlePickupCardClick('${h.month}', event)">
           <div class="pickup-month-top">
-            <label class="pickup-checkbox-label" onclick="event.stopPropagation()">
+            <label class="pickup-checkbox-label">
               <input 
                 type="checkbox" 
                 class="pickup-checkbox" 
@@ -852,7 +924,7 @@ function promptPickup(id) {
       <!-- Live summary bar -->
       <div class="pickup-summary-bar" id="pickupSummaryBar">
         <div class="pickup-summary-info">
-          <div class="pickup-summary-releasing">Releasing: <strong id="pickupSummaryCount">${totalBottles} bottles</strong></div>
+          <div class="pickup-summary-releasing">Releasing: <strong id="pickupSummaryCount">${totalBottles} bottle${totalBottles === 1 ? '' : 's'}</strong></div>
           <div class="pickup-summary-sub" id="pickupSummarySub">(${pending.length} of ${pending.length} months selected)</div>
         </div>
         <button type="button" class="btn-toggle-all" id="btnToggleAllMonths" onclick="toggleSelectAllPickupMonths()">Deselect all</button>
@@ -871,7 +943,7 @@ function promptPickup(id) {
     if (modalFoot) {
       modalFoot.innerHTML = `
         <button class="btn-ghost" onclick="closePickupModal()">Cancel</button>
-        <button class="btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm hand-off (${totalBottles} bottles)</button>
+        <button class="btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm hand-off (${totalBottles} bottle${totalBottles === 1 ? '' : 's'})</button>
       `;
     }
   }
@@ -880,7 +952,7 @@ function promptPickup(id) {
 }
 
 function handlePickupCardClick(monthKey, event) {
-  if (event.target.tagName === 'INPUT' || event.target.tagName === 'LABEL') return;
+  if (event.target.tagName === 'INPUT' || (event.target.closest && event.target.closest('label'))) return;
   const chk = document.getElementById(`pickupChk_${monthKey}`);
   if (chk) {
     chk.checked = !chk.checked;
@@ -1217,7 +1289,7 @@ async function testConnection() {
 
 function loadSampleData() {
   if (!confirm("Reset to demo data? (Unsaved local changes will be replaced)")) return;
-  state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+  state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS)).map(m => normalizeMember(m));
   saveLocalMembers();
   renderMembers();
   closeSettingsModal();
@@ -1225,12 +1297,26 @@ function loadSampleData() {
 }
 
 function resetMonthDemo() {
-  if (!confirm("Reset all members back to initial demo state?")) return;
-  state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+  if (!confirm("Reset all members back to AVAILABLE credit and PENDING bottle pickups for testing?")) return;
+  state.members.forEach(m => {
+    m.status = "AVAILABLE";
+    m.redeemedAt = "";
+    m.redeemedBy = "";
+    m.pickupStatus = "READY";
+    m.pickedUpAt = "";
+    m.pickedUpBy = "";
+    if (m.pickupHistory && Array.isArray(m.pickupHistory)) {
+      m.pickupHistory.forEach(h => {
+        h.status = "PENDING";
+        h.pickedUpAt = "";
+        h.pickedUpBy = "";
+      });
+    }
+  });
   saveLocalMembers();
   renderMembers();
   closeSettingsModal();
-  showToastNotification("Demo Data Reset", "All members restored to default pickup and credit status");
+  showToastNotification("All Benefits Available", "All members reset to AVAILABLE credit and PENDING pickups");
 }
 
 function updateConnectionStatusText() {

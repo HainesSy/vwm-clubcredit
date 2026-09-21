@@ -99,6 +99,8 @@ function doPost(e) {
     
     if (action === "redeem") {
       return handleRedemption(payload);
+    } else if (action === "bulk_pickup" || action === "pickup") {
+      return handlePickup(payload);
     } else if (action === "reset_month") {
       return handleManualMonthlyReset();
     } else {
@@ -111,6 +113,72 @@ function doPost(e) {
       error: error.toString()
     });
   }
+}
+
+/**
+ * Process a member bottle pickup (single or bulk month hand-off)
+ */
+function handlePickup(payload) {
+  const memberId = String(payload.memberId || "").trim();
+  const store = String(payload.store || "Store 1").trim();
+  const staff = String(payload.staff || "Staff").trim();
+  const notes = String(payload.notes || "iPad Bottle Pickup").trim();
+  const bottlesCount = Number(payload.bottlesCount || 0);
+  const months = Array.isArray(payload.months) ? payload.months.join(", ") : String(payload.month || "Current Month");
+  
+  if (!memberId) {
+    return createJsonResponse({ success: false, error: "Missing memberId" });
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_MEMBERS);
+  let memberData = null;
+  
+  if (sheet) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowId = String(data[i][0]).trim();
+      if (rowId.toLowerCase() === memberId.toLowerCase()) {
+        memberData = data[i];
+        break;
+      }
+    }
+  }
+  
+  const now = new Date();
+  const timestampStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+  
+  // Append to permanent Audit Log
+  let auditSheet = ss.getSheetByName(SHEET_AUDIT_LOG);
+  if (!auditSheet) {
+    auditSheet = ss.insertSheet(SHEET_AUDIT_LOG);
+    auditSheet.appendRow(["Timestamp", "Member_ID", "Full_Name", "Tier", "Credit_Amount", "Store", "Staff", "Notes"]);
+    auditSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e8f0fe");
+  }
+  
+  const memberName = memberData ? memberData[1] : ("Member " + memberId);
+  const memberTier = memberData ? memberData[4] : "Wine Club";
+  
+  auditSheet.appendRow([
+    timestampStr,
+    memberId,
+    memberName,
+    memberTier,
+    bottlesCount + " bottles",
+    store,
+    staff,
+    `Pickup months: [${months}] | ${notes}`
+  ]);
+  
+  return createJsonResponse({
+    success: true,
+    message: "Bottle pickup recorded successfully!",
+    memberId: memberId,
+    bottlesCount: bottlesCount,
+    months: months,
+    staff: staff,
+    timestamp: timestampStr
+  });
 }
 
 /**
