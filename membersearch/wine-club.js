@@ -338,6 +338,74 @@ function getInitialStaff() {
   return [...SERVER_NAMES];
 }
 
+function getInitialActiveServer() {
+  const saved = localStorage.getItem("vwm_active_server");
+  const staff = getInitialStaff();
+  if (saved && staff.includes(saved)) {
+    return saved;
+  }
+  const fallback = (staff && staff.length > 0) ? staff[0] : "Haines S.";
+  localStorage.setItem("vwm_active_server", fallback);
+  return fallback;
+}
+
+function setActiveServer(name) {
+  if (!name) return;
+  state.activeServer = name;
+  localStorage.setItem("vwm_active_server", name);
+  updateActiveServerUI();
+}
+
+function updateActiveServerUI() {
+  const sel = document.getElementById("topbarActiveServer");
+  if (sel) {
+    sel.value = state.activeServer;
+  }
+}
+
+function initActiveServerSelector() {
+  const sel = document.getElementById("topbarActiveServer");
+  if (!sel) return;
+  sel.innerHTML = state.staffList.map(s => 
+    `<option value="${esc(s)}" ${s === state.activeServer ? 'selected' : ''}>${esc(s)}</option>`
+  ).join("");
+  sel.value = state.activeServer;
+}
+
+function handleActiveServerChange(newServer) {
+  setActiveServer(newServer);
+  showToastNotification("Active Server Updated", `Shift server set to ${newServer}`);
+}
+
+function renderStaffChips(containerId, activeStaff) {
+  const staff = (state.staffList && state.staffList.length > 0) ? state.staffList : SERVER_NAMES;
+  return staff.map(s => {
+    const isSelected = s === activeStaff;
+    return `
+      <button 
+        type="button" 
+        class="staff-chip ${isSelected ? 'selected' : ''}" 
+        data-staff="${esc(s)}" 
+        onclick="selectStaffChip('${containerId}', '${esc(s)}')"
+      >
+        <span class="staff-chip-dot"></span>
+        <span class="staff-chip-name">${esc(s)}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function selectStaffChip(containerId, staffName) {
+  state.selectedStaff = staffName;
+  setActiveServer(staffName);
+  const container = document.getElementById(containerId);
+  if (container) {
+    container.querySelectorAll(".staff-chip").forEach(btn => {
+      btn.classList.toggle("selected", btn.getAttribute("data-staff") === staffName);
+    });
+  }
+}
+
 function normalizeMember(m) {
   if (!m || typeof m !== "object") return m;
   const isGrand = (m.tier || "").toLowerCase().includes("grand");
@@ -378,6 +446,8 @@ let state = {
   members: [],
   scriptUrl: localStorage.getItem("vwm_search_script_url") || "",
   staffList: getInitialStaff(),
+  activeServer: getInitialActiveServer(),
+  selectedStaff: null,
   activeFilter: "all",
   searchQuery: "",
   selectedMember: null,
@@ -391,6 +461,7 @@ let state = {
 // ---------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   initDateDisplay();
+  initActiveServerSelector();
   loadData();
 
   setInterval(() => {
@@ -476,12 +547,36 @@ async function fetchFromGoogleSheets(isBackground = false) {
       const existingMap = new Map(state.members.map(m => [m.id, m]));
       const merged = data.members.map(incoming => {
         const existing = existingMap.get(incoming.id);
-        if (existing && existing.pickupHistory && existing.pickupHistory.length > 0) {
-          if (!incoming.pickupHistory || !incoming.pickupHistory.length) {
-            incoming.pickupHistory = existing.pickupHistory;
-            incoming.pickupStatus = existing.pickupStatus;
-            incoming.pickedUpAt = existing.pickedUpAt;
-            incoming.pickedUpBy = existing.pickedUpBy;
+        if (existing) {
+          // 1. Data Sync Overwrite Protection: Never overwrite local REDEEMED status with AVAILABLE
+          if (existing.status === "REDEEMED") {
+            incoming.status = "REDEEMED";
+            incoming.redeemedAt = existing.redeemedAt || incoming.redeemedAt;
+            incoming.redeemedBy = existing.redeemedBy || incoming.redeemedBy;
+          }
+          // 2. Data Sync Overwrite Protection: Preserve local bottle pickup records
+          if (existing.pickupHistory && existing.pickupHistory.length > 0) {
+            if (!incoming.pickupHistory || !incoming.pickupHistory.length) {
+              incoming.pickupHistory = existing.pickupHistory;
+              incoming.pickupStatus = existing.pickupStatus;
+              incoming.pickedUpAt = existing.pickedUpAt;
+              incoming.pickedUpBy = existing.pickedUpBy;
+            } else {
+              const existingHistMap = new Map(existing.pickupHistory.map(h => [h.month, h]));
+              incoming.pickupHistory = incoming.pickupHistory.map(inH => {
+                const exH = existingHistMap.get(inH.month);
+                if (exH && exH.status === "PICKED_UP" && inH.status !== "PICKED_UP") {
+                  return exH;
+                }
+                return inH;
+              });
+              const hasPending = incoming.pickupHistory.some(h => h.status === "PENDING");
+              incoming.pickupStatus = hasPending ? "READY" : "PICKED_UP";
+              if (existing.pickedUpAt && (!incoming.pickedUpAt || existing.pickupStatus === "PICKED_UP")) {
+                incoming.pickedUpAt = existing.pickedUpAt;
+                incoming.pickedUpBy = existing.pickedUpBy;
+              }
+            }
           }
         }
         return normalizeMember(incoming);
@@ -598,13 +693,13 @@ function handleResultsSearch(query) {
   const clearBtn2 = document.getElementById("clearSearchBtn2");
   if (clearBtn2) clearBtn2.style.display = trimmed ? "flex" : "none";
 
+  clearTimeout(searchDebounceTimer);
   if (!trimmed) {
-    clearTimeout(searchDebounceTimer);
-    returnToLanding();
+    state.searchQuery = "";
+    renderMembers();
     return;
   }
 
-  clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     state.searchQuery = trimmed;
     renderMembers();
@@ -612,11 +707,63 @@ function handleResultsSearch(query) {
 }
 
 function clearResultsSearch() {
-  returnToLanding();
+  const input2 = document.getElementById("memberSearchInput2");
+  if (input2) {
+    input2.value = "";
+    input2.focus();
+  }
+  const clearBtn2 = document.getElementById("clearSearchBtn2");
+  if (clearBtn2) clearBtn2.style.display = "none";
+  clearTimeout(searchDebounceTimer);
+  state.searchQuery = "";
+  renderMembers();
 }
 
 function clearSearch() {
-  returnToLanding();
+  clearResultsSearch();
+}
+
+function matchMember(m, query) {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const qDigits = q.replace(/[^0-9]/g, "");
+  const mPhoneDigits = (m.phone || "").replace(/[^0-9]/g, "");
+  const mIdDigits = (m.id || "").replace(/[^0-9]/g, "");
+
+  // Direct phone or member ID numeric match (3+ digits)
+  if (qDigits.length >= 3 && (mPhoneDigits.includes(qDigits) || mIdDigits.includes(qDigits))) {
+    return true;
+  }
+
+  // Tokenize multi-word query by whitespace
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const name = (m.name || "").toLowerCase();
+  const email = (m.email || "").toLowerCase();
+  const tier = (m.tier || "").toLowerCase();
+  const idStr = (m.id || "").toLowerCase();
+  const phone = (m.phone || "").toLowerCase();
+
+  return tokens.every(token => {
+    // Substring matches on name, email, tier, id, or phone
+    if (name.includes(token)) return true;
+    if (email.includes(token)) return true;
+    if (tier.includes(token)) return true;
+    if (idStr.includes(token)) return true;
+    if (phone.includes(token)) return true;
+
+    // Numeric sub-token match against ID or phone digits
+    const tDigits = token.replace(/[^0-9]/g, "");
+    if (tDigits.length >= 2) {
+      if (mIdDigits.includes(tDigits)) return true;
+      if (mPhoneDigits.includes(tDigits)) return true;
+    }
+
+    return false;
+  });
 }
 
 function setFilter(filterType, btn) {
@@ -632,20 +779,9 @@ function setFilter(filterType, btn) {
 function filterMembers() {
   let list = [...state.members];
 
-  // 1. Text Query Filter
+  // 1. Tokenized & ID-indexed search filter
   if (state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
-    const digits = q.replace(/[^0-9]/g, "");
-    list = list.filter(m => {
-      if (m.name && m.name.toLowerCase().includes(q)) return true;
-      if (m.email && m.email.toLowerCase().includes(q)) return true;
-      if (m.tier && m.tier.toLowerCase().includes(q)) return true;
-      if (m.phone) {
-        const pd = m.phone.replace(/[^0-9]/g, "");
-        if (digits ? pd.includes(digits) : m.phone.toLowerCase().includes(q)) return true;
-      }
-      return false;
-    });
+    list = list.filter(m => matchMember(m, state.searchQuery));
   }
 
   // 2. Status Filter Pills
@@ -767,12 +903,27 @@ function cardHtml(m) {
           onclick="promptPickup('${m.id}')"
           title="${pendingCount > 0 ? `View ${pendingBottles} bottles ready for pickup` : 'View previous pickup history'}"
         >
-          ${pendingCount > 0 ? `View Bottles (${pendingBottles})` : 'Bottle History'}
+          <svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 2h6v3a4 4 0 0 1 1 2.5V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7.5A4 4 0 0 1 9 5V2z"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+          </svg>
+          <span>${pendingCount > 0 ? `View Bottles (${pendingBottles})` : 'Bottle History'}</span>
         </button>
 
         ${isCreditAvail
-          ? `<button type="button" class="action-btn btn-credit" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem ${amt}</button>`
-          : `<button type="button" class="action-btn btn-locked" disabled title="Bar tab credit already redeemed for this month">Credit Redeemed</button>`
+          ? `<button type="button" class="action-btn btn-credit" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">
+               <svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                 <rect width="20" height="14" x="2" y="5" rx="2"/>
+                 <line x1="2" y1="10" x2="22" y2="10"/>
+               </svg>
+               <span>Redeem ${amt}</span>
+             </button>`
+          : `<button type="button" class="action-btn btn-locked" disabled title="Bar tab credit already redeemed for this month">
+               <svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                 <polyline points="20 6 9 17 4 12"/>
+               </svg>
+               <span>Credit Redeemed</span>
+             </button>`
         }
       </div>
     </div>
@@ -798,10 +949,7 @@ function promptPickup(id) {
 
   // Pre-check all pending months by default for easy bulk pickup
   state.selectedPickupMonths = new Set(pending.map(h => h.month));
-
-  const serverOptions = state.staffList.map(s => 
-    `<option value="${esc(s)}">${esc(s)}</option>`
-  ).join("");
+  state.selectedStaff = state.activeServer || (state.staffList[0] || "Haines S.");
 
   const modalBody = document.getElementById("pickupModalBody");
   const modalFoot = document.getElementById("pickupModalFoot");
@@ -813,7 +961,12 @@ function promptPickup(id) {
     modalBody.innerHTML = `
       <div class="confirm-member">
         <div class="confirm-name">${esc(m.name)}</div>
-        <div class="confirm-tier">${esc(m.tier)} &bull; ${esc(m.phone || 'No phone')}</div>
+        <div class="confirm-id-tag">ID: ${esc(m.id)}</div>
+        <div class="confirm-contact-info">
+          <span class="confirm-phone">${esc(m.phone || 'No phone')}</span>
+          ${m.email ? `<span class="confirm-meta-dot">&bull;</span><span class="confirm-email">${esc(m.email)}</span>` : ''}
+        </div>
+        <div class="confirm-tier">${esc(m.tier)}</div>
       </div>
 
       <div class="pickup-all-done-banner">
@@ -907,7 +1060,12 @@ function promptPickup(id) {
     modalBody.innerHTML = `
       <div class="confirm-member">
         <div class="confirm-name">${esc(m.name)}</div>
-        <div class="confirm-tier">${esc(m.tier)} &bull; ${esc(m.phone || 'No phone')}</div>
+        <div class="confirm-id-tag">ID: ${esc(m.id)}</div>
+        <div class="confirm-contact-info">
+          <span class="confirm-phone">${esc(m.phone || 'No phone')}</span>
+          ${m.email ? `<span class="confirm-meta-dot">&bull;</span><span class="confirm-email">${esc(m.email)}</span>` : ''}
+        </div>
+        <div class="confirm-tier">${esc(m.tier)}</div>
       </div>
 
       <div class="pickup-section-label">
@@ -927,11 +1085,11 @@ function promptPickup(id) {
         <button type="button" class="btn-toggle-all" id="btnToggleAllMonths" onclick="toggleSelectAllPickupMonths()">Deselect all</button>
       </div>
 
-      <div class="pickup-server-row">
-        <label class="field-label" for="confirmPickupStaffSelect">Server Name:</label>
-        <select id="confirmPickupStaffSelect" class="confirm-staff-select">
-          ${serverOptions}
-        </select>
+      <div class="pickup-server-row modal-staff-section">
+        <label class="field-label">Server / Bartender:</label>
+        <div class="staff-chips-grid" id="pickupStaffChips">
+          ${renderStaffChips('pickupStaffChips', state.selectedStaff)}
+        </div>
       </div>
 
       ${pickedUpAccordionHtml}
@@ -1048,8 +1206,7 @@ async function executePickup() {
   const m = state.selectedMember;
   if (!m || state.selectedPickupMonths.size === 0) return;
 
-  const staffSelect = document.getElementById("confirmPickupStaffSelect");
-  const serverName = staffSelect ? staffSelect.value : (state.staffList[0] || "Haines S.");
+  const serverName = state.selectedStaff || state.activeServer || (state.staffList[0] || "Haines S.");
   const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
 
   const btn = document.getElementById("confirmPickupBtn");
@@ -1116,17 +1273,33 @@ function promptRedeem(id) {
   if (!m || m.status === "REDEEMED") return;
 
   state.selectedMember = m;
+  state.selectedStaff = state.activeServer || (state.staffList[0] || "Haines S.");
+
   const isGrandCru = (m.tier || "").toLowerCase().includes("grand");
   const amt = `$${Number(m.creditAmount || (isGrandCru ? 40 : 15)).toFixed(0)}`;
-
-  const serverOptions = state.staffList.map(s => 
-    `<option value="${esc(s)}">${esc(s)}</option>`
-  ).join("");
+  const discountBtnName = isGrandCru ? "Wine Club: Grand Cru ($40)" : "Wine Club: Value ($15)";
 
   document.getElementById("confirmModalBody").innerHTML = `
     <div class="confirm-member">
       <div class="confirm-name">${esc(m.name)}</div>
+      <div class="confirm-id-tag">ID: ${esc(m.id)}</div>
+      <div class="confirm-contact-info">
+        <span class="confirm-phone">${esc(m.phone || 'No phone')}</span>
+        ${m.email ? `<span class="confirm-meta-dot">&bull;</span><span class="confirm-email">${esc(m.email)}</span>` : ''}
+      </div>
       <div class="confirm-tier">${esc(m.tier)} &mdash; ${amt} bar credit</div>
+    </div>
+
+    <!-- Toast POS Guidance Box -->
+    <div class="toast-pos-guidance">
+      <div class="toast-pos-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Toast POS Guidance
+      </div>
+      <div class="toast-pos-action">
+        Toast POS Button: Apply <span class="toast-pos-btn-name">"${discountBtnName}"</span>
+      </div>
+      <div class="toast-pos-sub">On Toast terminal: tap <em>Discounts</em> &rarr; select <strong>${discountBtnName}</strong></div>
     </div>
 
     <div class="confirm-row">
@@ -1138,10 +1311,12 @@ function promptRedeem(id) {
       <span class="confirm-value">${amt}</span>
     </div>
 
-    <label class="field-label" style="margin-top:20px;">Server Name:</label>
-    <select id="confirmStaffSelect" class="confirm-staff-select">
-      ${serverOptions}
-    </select>
+    <div class="modal-staff-section">
+      <label class="field-label">Server / Bartender:</label>
+      <div class="staff-chips-grid" id="creditStaffChips">
+        ${renderStaffChips('creditStaffChips', state.selectedStaff)}
+      </div>
+    </div>
 
     <p class="confirm-note">This locks the member's monthly bar tab credit across all stores until next month.</p>
   `;
@@ -1159,8 +1334,7 @@ async function executeRedemption() {
   const m = state.selectedMember;
   if (!m) return;
 
-  const staffSelect = document.getElementById("confirmStaffSelect");
-  const serverName = staffSelect ? staffSelect.value : (state.staffList[0] || "Haines S.");
+  const serverName = state.selectedStaff || state.activeServer || (state.staffList[0] || "Haines S.");
   const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
 
   const btn = document.getElementById("confirmRedeemBtn");
@@ -1261,6 +1435,10 @@ function saveSettings() {
       if (names.length) {
         state.staffList = names;
         localStorage.setItem("vwm_search_staff_list", JSON.stringify(state.staffList));
+        if (!state.staffList.includes(state.activeServer)) {
+          setActiveServer(state.staffList[0]);
+        }
+        initActiveServerSelector();
       }
     }
   }
@@ -1288,6 +1466,10 @@ async function testConnection() {
 
 function loadSampleData() {
   if (!confirm("Reset to demo data? (Unsaved local changes will be replaced)")) return;
+  state.staffList = [...SERVER_NAMES];
+  localStorage.setItem("vwm_search_staff_list", JSON.stringify(SERVER_NAMES));
+  setActiveServer(SERVER_NAMES[0]);
+  initActiveServerSelector();
   state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS)).map(m => normalizeMember(m));
   saveLocalMembers();
   renderMembers();
@@ -1335,7 +1517,9 @@ function esc(s) {
 function fmtTs(ts) {
   if (!ts) return "earlier this month";
   try {
-    const d = new Date(ts);
+    const sanitized = String(ts).trim().replace(" ", "T");
+    const d = new Date(sanitized);
+    if (isNaN(d.getTime())) return ts;
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " at " +
            d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   } catch (e) {
