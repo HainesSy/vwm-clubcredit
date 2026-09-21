@@ -203,11 +203,11 @@ const assert = require("assert");
   assert.ok(matchMember(sarahMember, "sarah 1002"), "Sarah Johnson must match 'sarah 1002'");
   console.log("✓ Requirement 6 PASSED: Search tokenization & member ID indexing verified without cross-member digit leaks");
 
-  // Test 7: Portrait Tablet 2-Column Grid
-  console.log("Checking Requirement 7: Portrait tablet 2-column breakpoint in styles.css...");
-  assert.ok(cssContent.includes("@media(max-width: 680px)"), "Breakpoint must be max-width: 680px");
-  assert.ok(!cssContent.includes("@media(max-width: 820px)"), "Old breakpoint max-width: 820px must be removed");
-  console.log("✓ Requirement 7 PASSED: 680px breakpoint set for 2-column portrait tablet");
+  // Test 7: Reverted Tablet Breakpoint (Spacious 2-column on desktop, 1-column below 820px)
+  console.log("Checking Requirement 7: Spacious layout breakpoint in styles.css...");
+  assert.ok(cssContent.includes("@media(max-width: 820px)"), "Breakpoint must be max-width: 820px to prevent squished cards");
+  assert.ok(cssContent.includes("minmax(420px, 1fr)"), "Card grid minmax must be 420px for spacious layout");
+  console.log("✓ Requirement 7 PASSED: 820px breakpoint & 420px minmax set for spacious unsquished cards");
 
   // Test 8: Action Button Vector Iconography
   console.log("Checking Requirement 8: Action button vector SVG icons in cardHtml...");
