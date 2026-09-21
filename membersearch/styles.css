@@ -72,7 +72,6 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.01em;
 }
 
 .app {
@@ -254,7 +253,7 @@ body {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .topbar-server-picker {
@@ -284,11 +283,12 @@ body {
   color: #fff;
   font-size: 13px;
   font-weight: 600;
-  padding: 9px 30px 9px 14px;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 28px 4px 12px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   outline: none;
-  min-height: 44px;
   transition: border-color .15s, background .15s;
 }
 
@@ -303,7 +303,7 @@ body {
 
 .topbar-select-arrow {
   position: absolute;
-  right: 10px;
+  right: 9px;
   pointer-events: none;
   color: var(--text-dim);
 }
@@ -312,7 +312,6 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-dim);
-  letter-spacing: 0.2px;
 }
 
 .topbar-icon-btn {
@@ -320,13 +319,9 @@ body {
   border: none;
   color: var(--text-dim);
   cursor: pointer;
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  padding: 0;
-  border-radius: var(--radius);
-  display: inline-flex;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
   align-items: center;
   justify-content: center;
   transition: color .15s, background .15s;
@@ -379,6 +374,7 @@ body {
   text-align: center;
   animation: smoothFadeIn .22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, transform;
+  overflow: hidden;
 }
 
 .landing-center {
@@ -394,7 +390,7 @@ body {
   font-weight: 600;
   color: #fff;
   margin-bottom: 8px;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
 }
 
 .landing-subtitle {
@@ -414,13 +410,13 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-pill);
   padding: 6px 12px 6px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
   transition: border-color .15s, box-shadow .15s, transform .15s;
 }
 
 .chatgpt-input-box:focus-within {
   border-color: rgba(223, 193, 139, 0.55);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(223, 193, 139, 0.2);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(223, 193, 139, 0.2);
 }
 
 .chatgpt-input-plus {
@@ -446,14 +442,14 @@ body {
 }
 
 .chatgpt-search-input::placeholder {
-  color: #70707a;
+  color: #737373;
 }
 
 .chatgpt-action-btn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #50505a;
+  background: #676767;
   color: #fff;
   border: none;
   display: flex;
@@ -464,7 +460,7 @@ body {
 }
 
 .chatgpt-action-btn:hover {
-  background: #6e6e7c;
+  background: #8e8e8e;
 }
 
 /* Landing prompt pills */
@@ -475,11 +471,7 @@ body {
 }
 
 .chatgpt-pill-btn {
-  min-height: 44px;
   padding: 10px 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-light);
   background: var(--surface-alt);
@@ -492,7 +484,7 @@ body {
 
 .chatgpt-pill-btn:hover {
   background: var(--surface-hover);
-  border-color: var(--border-focus);
+  border-color: #525252;
   transform: translateY(-1px);
 }
 
