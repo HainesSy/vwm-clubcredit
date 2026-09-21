@@ -19,7 +19,7 @@
   --surface-hover: #2a2a32;
   --border: #282832;
   --border-light: #363644;
-  --border-focus: #781c28;
+  --border-focus: #c5a874;
 
   /* Typography */
   --text: #f5f5f7;
@@ -286,8 +286,8 @@ body {
 }
 
 .chatgpt-input-box:focus-within {
-  border-color: var(--border-focus);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(223, 193, 139, 0.55);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(223, 193, 139, 0.2);
 }
 
 .chatgpt-input-plus {
