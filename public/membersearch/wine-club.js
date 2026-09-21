@@ -928,7 +928,7 @@ function cardHtml(m) {
             <path d="M9 2h6v3a4 4 0 0 1 1 2.5V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7.5A4 4 0 0 1 9 5V2z"/>
             <line x1="8" y1="13" x2="16" y2="13"/>
           </svg>
-          <span>${pendingCount > 0 ? `Club Pickup ×${pendingCount}` : 'Bottle History'}</span>
+          <span>${pendingCount > 0 ? `Club Pickup${pendingCount > 1 ? ` <span style="opacity:.55;font-size:.85em">×${pendingCount}</span>` : ''}` : 'Bottle History'}</span>
         </button>
 
         ${isCreditAvail
