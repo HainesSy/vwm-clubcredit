@@ -209,13 +209,30 @@ const assert = require("assert");
   assert.ok(cssContent.includes("minmax(420px, 1fr)"), "Card grid minmax must be 420px for spacious layout");
   console.log("✓ Requirement 7 PASSED: 820px breakpoint & 420px minmax set for spacious unsquished cards");
 
-  // Test 8: Action Button Vector Iconography
-  console.log("Checking Requirement 8: Action button vector SVG icons in cardHtml...");
+  // Test 8: Action Button Vector Iconography & Pickup Button Text
+  console.log("Checking Requirement 8: Action button vector SVG icons & button text in cardHtml...");
   const cardOutput = cardHtml(normalizeMember(member1));
   assert.ok(cardOutput.includes("<svg") && cardOutput.includes("action-btn-svg"), "Card actions must have action-btn-svg vector icons");
   assert.ok(cardOutput.includes("M9 2h6v3a4 4 0 0 1 1 2.5V20"), "Bottle pickup button must include wine bottle SVG path");
   assert.ok(cardOutput.includes('rect width="20" height="14"'), "Credit button must include credit card SVG");
-  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons rendered in action buttons");
+  assert.ok(cardOutput.includes("Club Pickup (4 mos)"), "Card button text for member with 4 pending months must be 'Club Pickup (4 mos)'");
+
+  const singleMonthMember = normalizeMember({
+    ...member1,
+    id: "MBR-TEST-1",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-09"])
+  });
+  const singleCardOutput = cardHtml(singleMonthMember);
+  assert.ok(singleCardOutput.includes("Club Pickup (1 mo)"), "Card button text for member with 1 pending month must be 'Club Pickup (1 mo)'");
+
+  const zeroMonthMember = normalizeMember({
+    ...member1,
+    id: "MBR-TEST-0",
+    pickupHistory: makePickupHistory("Grand Cru Club", [])
+  });
+  const zeroCardOutput = cardHtml(zeroMonthMember);
+  assert.ok(zeroCardOutput.includes("Bottle History"), "Card button text for member with 0 pending months must be 'Bottle History'");
+  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons and 'Club Pickup (X mos)' rendered in action buttons");
 
   // Test 9: Safari WebKit Timestamp Sanitization
   console.log("Checking Requirement 9: Safari WebKit timestamp sanitization...");

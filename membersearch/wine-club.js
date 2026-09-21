@@ -922,13 +922,13 @@ function cardHtml(m) {
           type="button" 
           class="action-btn ${pendingCount > 0 ? 'btn-wine' : 'btn-dim'}" 
           onclick="promptPickup('${m.id}')"
-          title="${pendingCount > 0 ? `View ${pendingBottles} bottles ready for pickup` : 'View previous pickup history'}"
+          title="${pendingCount > 0 ? `Club pickup: ${pendingCount} ${pendingCount === 1 ? 'month' : 'months'} (${pendingBottles} bottles ready)` : 'View previous pickup history'}"
         >
           <svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 2h6v3a4 4 0 0 1 1 2.5V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7.5A4 4 0 0 1 9 5V2z"/>
             <line x1="8" y1="13" x2="16" y2="13"/>
           </svg>
-          <span>${pendingCount > 0 ? `View Bottles (${pendingBottles})` : 'Bottle History'}</span>
+          <span>${pendingCount > 0 ? `Club Pickup (${pendingCount} ${pendingCount === 1 ? 'mo' : 'mos'})` : 'Bottle History'}</span>
         </button>
 
         ${isCreditAvail
