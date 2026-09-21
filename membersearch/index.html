@@ -118,14 +118,14 @@
 
     <!-- Confirm Bottle Pickup Modal -->
     <div class="overlay" id="pickupModal" style="display:none;">
-      <div class="modal">
+      <div class="modal modal-wide">
         <div class="modal-head">
-          <h2>Confirm bottle pickup</h2>
+          <h2 id="pickupModalHeading">Wine Bottle Pickup</h2>
           <button class="modal-x" onclick="closePickupModal()">&#x2715;</button>
         </div>
         <div class="modal-body" id="pickupModalBody"></div>
-        <div class="modal-foot">
-          <button class="btn-ghost" onclick="closePickupModal()">Cancel</button>
+        <div class="modal-foot" id="pickupModalFoot">
+          <button class="btn-ghost" id="pickupCancelBtn" onclick="closePickupModal()">Cancel</button>
           <button class="btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm bottle hand-off</button>
         </div>
       </div>

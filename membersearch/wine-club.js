@@ -1,17 +1,49 @@
 /**
  * Wine Club Member Search — Featured Edition
- * Bar Credit + Monthly Bottle Pickups + Tier Wine Allocations
+ * Bar Credit + Accumulating Monthly Bottle Pickups + Tier Allocations
  */
 
-const MONTHLY_WINES = {
-  "Grand Cru Club": [
-    "2020 Silver Oak Alexander Valley Cabernet Sauvignon",
-    "2021 Caymus Vineyards Napa Valley Cabernet Sauvignon"
-  ],
-  "Value Club": [
-    "2022 Duckhorn Vineyards Sauvignon Blanc",
-    "2021 DAOU Discovery Cabernet Sauvignon"
-  ]
+const WINE_CATALOG = {
+  "2026-09": {
+    "Grand Cru Club": [
+      "2020 Silver Oak Alexander Valley Cabernet Sauvignon",
+      "2021 Caymus Vineyards Napa Valley Cabernet Sauvignon"
+    ],
+    "Value Club": [
+      "2022 Duckhorn Vineyards Sauvignon Blanc",
+      "2021 DAOU Discovery Cabernet Sauvignon"
+    ]
+  },
+  "2026-08": {
+    "Grand Cru Club": [
+      "2023 Jordan Alexander Valley Cabernet Sauvignon",
+      "2021 Opus One Napa Valley Red Blend"
+    ],
+    "Value Club": [
+      "2022 La Crema Sonoma Coast Pinot Noir",
+      "2022 Whispering Angel Côtes de Provence Rosé"
+    ]
+  },
+  "2026-07": {
+    "Grand Cru Club": [
+      "2022 Stag's Leap Artemis Cabernet Sauvignon",
+      "2020 Duckhorn Napa Valley Merlot"
+    ],
+    "Value Club": [
+      "2021 Meiomi Pinot Noir",
+      "2022 Kim Crawford Marlborough Sauvignon Blanc"
+    ]
+  },
+  "2026-06": {
+    "Grand Cru Club": [
+      "2019 Far Niente Napa Valley Estate Cabernet Sauvignon",
+      "2021 Rombauer Carneros Chardonnay"
+    ],
+    "Value Club": [
+      "2022 Decoy Sonoma County Red Blend",
+      "2023 Oyster Bay Marlborough Pinot Grigio"
+    ]
+  }
 };
 
 const SERVER_NAMES = [
@@ -23,23 +55,265 @@ const SERVER_NAMES = [
   "Matt G."
 ];
 
+function makePickupHistory(tier, pendingMonthList) {
+  const months = ["2026-06", "2026-07", "2026-08", "2026-09"];
+  const isGrand = (tier || "").toLowerCase().includes("grand");
+  const tierKey = isGrand ? "Grand Cru Club" : "Value Club";
+
+  return months.map(m => {
+    const isPending = pendingMonthList.includes(m);
+    const wines = (WINE_CATALOG[m] && WINE_CATALOG[m][tierKey]) ? [...WINE_CATALOG[m][tierKey]] : [];
+    return {
+      month: m,
+      status: isPending ? "PENDING" : "PICKED_UP",
+      wines: wines,
+      pickedUpAt: isPending ? "" : "2026-09-02 14:30:00",
+      pickedUpBy: isPending ? "" : "Haines S."
+    };
+  });
+}
+
 const INITIAL_DEMO_MEMBERS = [
-  { id: "MBR-1001", name: "John Smith", phone: "555-0101", email: "john.smith@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1088", name: "John Smith", phone: "555-0988", email: "jsmith.vintage@gmail.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1002", name: "Sarah Johnson", phone: "555-0102", email: "sarah.j@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "PICKED_UP", pickedUpAt: "2026-09-08 16:45:00", pickedUpBy: "Haines S." },
-  { id: "MBR-1003", name: "Michael Davis", phone: "555-0103", email: "mdavis@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "REDEEMED", redeemedAt: "2026-09-04 18:22:15", redeemedBy: "Haines S.", pickupStatus: "PICKED_UP", pickedUpAt: "2026-09-04 18:22:15", pickedUpBy: "Haines S." },
-  { id: "MBR-1004", name: "Emily Wilson", phone: "555-0104", email: "emily.w@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1005", name: "Robert Martinez", phone: "555-0105", email: "robert.m@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1006", name: "Jessica Taylor", phone: "555-0106", email: "jtaylor@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "REDEEMED", redeemedAt: "2026-09-08 19:45:00", redeemedBy: "Harry F.", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1007", name: "David Anderson", phone: "555-0107", email: "dave.anderson@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1008", name: "Amanda Thomas", phone: "555-0108", email: "amanda.t@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1009", name: "James Jackson", phone: "555-0109", email: "jjackson@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1010", name: "Jennifer White", phone: "555-0110", email: "jennifer.w@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1011", name: "Christopher Harris", phone: "555-0111", email: "charris@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1012", name: "Lisa Martin", phone: "555-0112", email: "lisa.m@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1013", name: "Matthew Clark", phone: "555-0113", email: "mclark@example.com", tier: "Value Club", creditAmount: 15, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1014", name: "Ashley Lewis", phone: "555-0114", email: "alewis@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" },
-  { id: "MBR-1015", name: "Daniel Robinson", phone: "555-0115", email: "drobinson@example.com", tier: "Grand Cru Club", creditAmount: 40, status: "AVAILABLE", redeemedAt: "", redeemedBy: "", pickupStatus: "READY", pickedUpAt: "", pickedUpBy: "" }
+  {
+    id: "MBR-1001",
+    name: "John Smith",
+    phone: "555-0101",
+    email: "john.smith@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-06", "2026-07", "2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1088",
+    name: "John Smith",
+    phone: "555-0988",
+    email: "jsmith.vintage@gmail.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Value Club", ["2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1002",
+    name: "Sarah Johnson",
+    phone: "555-0102",
+    email: "sarah.j@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "PICKED_UP",
+    pickedUpAt: "2026-09-08 16:45:00",
+    pickedUpBy: "Haines S.",
+    pickupHistory: makePickupHistory("Value Club", [])
+  },
+  {
+    id: "MBR-1003",
+    name: "Michael Davis",
+    phone: "555-0103",
+    email: "mdavis@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "REDEEMED",
+    redeemedAt: "2026-09-04 18:22:15",
+    redeemedBy: "Haines S.",
+    pickupStatus: "PICKED_UP",
+    pickedUpAt: "2026-09-04 18:22:15",
+    pickedUpBy: "Haines S.",
+    pickupHistory: makePickupHistory("Grand Cru Club", [])
+  },
+  {
+    id: "MBR-1004",
+    name: "Emily Wilson",
+    phone: "555-0104",
+    email: "emily.w@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Value Club", ["2026-07", "2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1005",
+    name: "Robert Martinez",
+    phone: "555-0105",
+    email: "robert.m@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-09"])
+  },
+  {
+    id: "MBR-1006",
+    name: "Jessica Taylor",
+    phone: "555-0106",
+    email: "jtaylor@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "REDEEMED",
+    redeemedAt: "2026-09-08 19:45:00",
+    redeemedBy: "Harry F.",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1007",
+    name: "David Anderson",
+    phone: "555-0107",
+    email: "dave.anderson@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Value Club", ["2026-09"])
+  },
+  {
+    id: "MBR-1008",
+    name: "Amanda Thomas",
+    phone: "555-0108",
+    email: "amanda.t@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-06", "2026-07", "2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1009",
+    name: "James Jackson",
+    phone: "555-0109",
+    email: "jjackson@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Value Club", ["2026-07", "2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1010",
+    name: "Jennifer White",
+    phone: "555-0110",
+    email: "jennifer.w@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1011",
+    name: "Christopher Harris",
+    phone: "555-0111",
+    email: "charris@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "PICKED_UP",
+    pickedUpAt: "2026-09-07 12:10:00",
+    pickedUpBy: "Nancy J.",
+    pickupHistory: makePickupHistory("Value Club", [])
+  },
+  {
+    id: "MBR-1012",
+    name: "Lisa Martin",
+    phone: "555-0112",
+    email: "lisa.m@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-09"])
+  },
+  {
+    id: "MBR-1013",
+    name: "Matthew Clark",
+    phone: "555-0113",
+    email: "mclark@example.com",
+    tier: "Value Club",
+    creditAmount: 15,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Value Club", ["2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1014",
+    name: "Ashley Lewis",
+    phone: "555-0114",
+    email: "alewis@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-07", "2026-08", "2026-09"])
+  },
+  {
+    id: "MBR-1015",
+    name: "Daniel Robinson",
+    phone: "555-0115",
+    email: "drobinson@example.com",
+    tier: "Grand Cru Club",
+    creditAmount: 40,
+    status: "AVAILABLE",
+    redeemedAt: "",
+    redeemedBy: "",
+    pickupStatus: "READY",
+    pickedUpAt: "",
+    pickedUpBy: "",
+    pickupHistory: makePickupHistory("Grand Cru Club", ["2026-09"])
+  }
 ];
 
 function getInitialStaff() {
@@ -57,6 +331,7 @@ let state = {
   activeFilter: "all",
   searchQuery: "",
   selectedMember: null,
+  selectedPickupMonths: new Set(),
   isSyncing: false,
   viewMode: "landing"
 };
@@ -87,12 +362,20 @@ function loadData() {
   const cached = localStorage.getItem("vwm_search_members_cache");
   if (cached) {
     try {
-      state.members = JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].pickupHistory) {
+        state.members = parsed;
+      } else {
+        // Upgrade legacy cache structure
+        state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+        saveLocalMembers();
+      }
     } catch (e) {
-      state.members = [...INITIAL_DEMO_MEMBERS];
+      state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
+      saveLocalMembers();
     }
   } else {
-    state.members = [...INITIAL_DEMO_MEMBERS];
+    state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
     saveLocalMembers();
   }
 
@@ -301,11 +584,21 @@ function filterMembers() {
 
   // 2. Status Filter Pills
   if (state.activeFilter === "bottles-ready") {
-    list = list.filter(m => m.pickupStatus === "READY");
+    list = list.filter(m => {
+      if (m.pickupHistory && Array.isArray(m.pickupHistory)) {
+        return m.pickupHistory.some(h => h.status === "PENDING");
+      }
+      return m.pickupStatus === "READY";
+    });
   } else if (state.activeFilter === "credit-available") {
     list = list.filter(m => m.status === "AVAILABLE");
   } else if (state.activeFilter === "completed") {
-    list = list.filter(m => m.status === "REDEEMED" && m.pickupStatus === "PICKED_UP");
+    list = list.filter(m => {
+      const hasPendingBottles = m.pickupHistory && Array.isArray(m.pickupHistory)
+        ? m.pickupHistory.some(h => h.status === "PENDING")
+        : m.pickupStatus === "READY";
+      return m.status === "REDEEMED" && !hasPendingBottles;
+    });
   }
 
   // 3. Always sort alphabetically by name A-Z
@@ -315,7 +608,7 @@ function filterMembers() {
 }
 
 // ---------------------------------------------------------------------------
-// Rendering Members & Dual Benefit Cards
+// Rendering Members & Decluttered Compact Cards
 // ---------------------------------------------------------------------------
 function renderMembers() {
   const container = document.getElementById("membersListContainer");
@@ -339,147 +632,350 @@ function renderMembers() {
 
 function cardHtml(m) {
   const isGrandCru = (m.tier || "").toLowerCase().includes("grand");
-  const tierKey = isGrandCru ? "Grand Cru Club" : "Value Club";
-  const wines = MONTHLY_WINES[tierKey] || MONTHLY_WINES["Value Club"];
   const amt = `$${Number(m.creditAmount || (isGrandCru ? 40 : 15)).toFixed(0)}`;
-
   const isCreditAvail = m.status === "AVAILABLE";
-  const isBottlesReady = m.pickupStatus === "READY";
 
-  const wineListHtml = wines.map(w => `
-    <div class="wine-bottle-item">
-      <span class="wine-bottle-bullet">●</span>
-      <span>${esc(w)}</span>
-    </div>
-  `).join("");
+  // Accumulating bottle pickups
+  const history = m.pickupHistory || [];
+  const pendingItems = history.filter(h => h.status === "PENDING");
+  const pendingCount = pendingItems.length;
+  const pendingBottles = pendingItems.reduce((acc, h) => acc + (h.wines ? h.wines.length : 2), 0);
+
+  const pendingLabels = pendingItems.map(h => formatMonthShort(h.month)).join(", ");
+
+  const pickedUpItems = history.filter(h => h.status === "PICKED_UP");
+  const lastPickedUp = pickedUpItems[pickedUpItems.length - 1];
 
   return `
     <div class="card" id="card-${m.id}">
       <div class="card-top">
-        <div>
+        <div class="card-info">
           <div class="card-name">${esc(m.name)}</div>
-          <div class="card-phone">${esc(m.phone || "—")}</div>
-          ${m.email ? `<div class="card-email">${esc(m.email)}</div>` : ""}
+          <div class="card-meta">
+            <span class="card-phone">${esc(m.phone || "—")}</span>
+            ${m.email ? `<span class="card-meta-dot">&bull;</span><span class="card-email">${esc(m.email)}</span>` : ""}
+          </div>
         </div>
         <span class="tag ${isGrandCru ? 'tag-gold' : 'tag-purple'}">${esc(m.tier)}</span>
       </div>
 
-      <!-- Benefit 1: Monthly Wine Allocation (Pickup) -->
-      <div class="card-benefit-section">
-        <div class="card-benefit-header">
-          <div class="card-benefit-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8M12 11v11M5 2h14v7a7 7 0 0 1-14 0Z"/></svg>
-            <span>Monthly Wine Allocation</span>
-          </div>
-        </div>
-
-        <div class="status-strip ${isBottlesReady ? 'ready' : 'picked-up'}">
-          <div>
-            <div style="display:flex;align-items:center;">
-              <span class="status-dot ${isBottlesReady ? 'ready' : 'picked-up'}"></span>
-              <span>${isBottlesReady ? '2 Bottles Ready for Pickup' : 'Bottles Picked Up'}</span>
+      <div class="card-status-list">
+        <!-- Wine Pickup Status Row -->
+        <div class="card-status-row ${pendingCount > 0 ? 'status-amber' : 'status-done'}">
+          <div class="status-row-icon">🍷</div>
+          <div class="status-row-text">
+            <div class="status-row-primary">
+              ${pendingCount > 0
+                ? `<span class="status-highlight">${pendingCount} month${pendingCount > 1 ? 's' : ''} waiting</span> <span class="status-pill-bottles">${pendingBottles} btl${pendingBottles > 1 ? 's' : ''}</span>`
+                : `<span class="status-done-title">All bottles picked up</span>`
+              }
             </div>
-            ${!isBottlesReady ? `<div class="status-detail">${fmtTs(m.pickedUpAt)} by ${esc(m.pickedUpBy || "staff")}</div>` : ""}
+            <div class="status-row-secondary">
+              ${pendingCount > 0
+                ? `Pending: ${pendingLabels}`
+                : (lastPickedUp && lastPickedUp.pickedUpAt ? `Last pickup ${fmtTs(lastPickedUp.pickedUpAt)} by ${esc(lastPickedUp.pickedUpBy || 'staff')}` : 'Up to date')
+              }
+            </div>
           </div>
         </div>
 
-        <div class="wine-bottles-list">
-          ${wineListHtml}
+        <!-- Bar Credit Status Row -->
+        <div class="card-status-row ${isCreditAvail ? 'status-green' : 'status-done'}">
+          <div class="status-row-icon">💳</div>
+          <div class="status-row-text">
+            <div class="status-row-primary">
+              ${isCreditAvail
+                ? `<span class="status-highlight">${amt} bar credit</span> available`
+                : `<span class="status-done-title">${amt} bar credit redeemed</span>`
+              }
+            </div>
+            <div class="status-row-secondary">
+              ${isCreditAvail
+                ? `Use-it-or-lose-it for September 2026`
+                : (m.redeemedAt ? `Redeemed ${fmtTs(m.redeemedAt)} by ${esc(m.redeemedBy || 'staff')}` : 'Redeemed for September 2026')
+              }
+            </div>
+          </div>
         </div>
-
-        ${isBottlesReady
-          ? `<button class="action-btn active pickup-btn" onclick="promptPickup('${m.id}')">Mark 2 Bottles Picked Up</button>`
-          : `<button class="action-btn locked" disabled>Bottles Already Picked Up</button>`}
       </div>
 
-      <!-- Benefit 2: Monthly Bar Tab Credit -->
-      <div class="card-benefit-section">
-        <div class="card-benefit-header">
-          <div class="card-benefit-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span>Monthly Bar Tab Credit</span>
-          </div>
-          <span class="status-amount">${amt}</span>
-        </div>
-
-        <div class="status-strip ${isCreditAvail ? 'available' : 'redeemed'}">
-          <div>
-            <div style="display:flex;align-items:center;">
-              <span class="status-dot ${isCreditAvail ? 'available' : 'redeemed'}"></span>
-              <span>${isCreditAvail ? 'Credit Available' : 'Credit Redeemed'}</span>
-            </div>
-            ${!isCreditAvail ? `<div class="status-detail">${fmtTs(m.redeemedAt)} by ${esc(m.redeemedBy || "staff")}</div>` : ""}
-          </div>
-          <div class="status-amount">${amt}</div>
-        </div>
+      <div class="card-actions">
+        <button 
+          type="button" 
+          class="action-btn ${pendingCount > 0 ? 'active pickup-btn' : 'btn-dim'}" 
+          onclick="promptPickup('${m.id}')"
+        >
+          ${pendingCount > 0 ? `View Bottles (${pendingBottles})` : 'Bottle History'}
+        </button>
 
         ${isCreditAvail
-          ? `<button class="action-btn active credit-btn" onclick="promptRedeem('${m.id}')">Redeem ${amt} bar credit</button>`
-          : `<button class="action-btn locked" disabled>Bar Credit Already Redeemed</button>`}
+          ? `<button type="button" class="action-btn active credit-btn" onclick="promptRedeem('${m.id}')">Redeem ${amt}</button>`
+          : `<button type="button" class="action-btn locked" disabled>Credit Redeemed</button>`
+        }
       </div>
-
-    </div>`;
+    </div>
+  `;
 }
 
 // ---------------------------------------------------------------------------
-// Bottle Pickup Confirmation Flow
+// Bottle Pickup Multi-Month Modal & Interaction
 // ---------------------------------------------------------------------------
 function promptPickup(id) {
   const m = state.members.find(x => x.id === id);
-  if (!m || m.pickupStatus === "PICKED_UP") return;
+  if (!m) return;
 
   state.selectedMember = m;
-  const isGrandCru = (m.tier || "").toLowerCase().includes("grand");
-  const tierKey = isGrandCru ? "Grand Cru Club" : "Value Club";
-  const wines = MONTHLY_WINES[tierKey] || MONTHLY_WINES["Value Club"];
+  const history = m.pickupHistory || [];
+  const pending = history.filter(h => h.status === "PENDING");
+  const pickedUp = history.filter(h => h.status === "PICKED_UP");
 
-  const wineItemsHtml = wines.map(w => `
-    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;color:#fff;">
-      <span style="color:#10a37f;font-weight:700;">✓</span>
-      <span>${esc(w)}</span>
-    </div>
-  `).join("");
+  // Pre-check all pending months by default for easy bulk pickup
+  state.selectedPickupMonths = new Set(pending.map(h => h.month));
 
   const serverOptions = state.staffList.map(s => 
     `<option value="${esc(s)}">${esc(s)}</option>`
   ).join("");
 
-  document.getElementById("pickupModalBody").innerHTML = `
-    <div class="confirm-member">
-      <div class="confirm-name">${esc(m.name)}</div>
-      <div class="confirm-tier">${esc(m.tier)} &mdash; 2 Bottles Allocation</div>
-    </div>
+  const modalBody = document.getElementById("pickupModalBody");
+  const modalFoot = document.getElementById("pickupModalFoot");
+  const modalHead = document.getElementById("pickupModalHeading");
+  if (modalHead) modalHead.textContent = `Bottle Pickup — ${m.name}`;
 
-    <div class="confirm-row">
-      <span class="confirm-label">Date</span>
-      <span class="confirm-value">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-    </div>
+  if (pending.length === 0) {
+    // All picked up view (History only)
+    modalBody.innerHTML = `
+      <div class="confirm-member">
+        <div class="confirm-name">${esc(m.name)}</div>
+        <div class="confirm-tier">${esc(m.tier)} &bull; ${esc(m.phone || 'No phone')}</div>
+      </div>
 
-    <div class="confirm-wine-box">
-      <div class="confirm-wine-title">Bottles to release to member:</div>
-      ${wineItemsHtml}
-    </div>
+      <div class="pickup-all-done-banner">
+        <div class="done-check-badge">✓</div>
+        <div class="done-title">All bottles are picked up</div>
+        <div class="done-sub">This member has no pending wine allocations waiting for pickup.</div>
+      </div>
 
-    <label class="field-label" style="margin-top:16px;">Server Name:</label>
-    <select id="confirmPickupStaffSelect" class="confirm-staff-select">
-      ${serverOptions}
-    </select>
+      <div class="pickup-history-section">
+        <div class="pickup-section-label">Pickup Record (${pickedUp.length} month${pickedUp.length > 1 ? 's' : ''})</div>
+        <div class="history-items-list">
+          ${pickedUp.map(h => `
+            <div class="history-item">
+              <div class="history-item-top">
+                <span class="history-item-month">✓ ${formatMonthName(h.month)}</span>
+                <span class="history-item-date">${fmtTs(h.pickedUpAt)} by ${esc(h.pickedUpBy || 'staff')}</span>
+              </div>
+              <div class="history-item-wines">
+                ${(h.wines || []).map(w => `<div class="history-item-wine">• ${esc(w)}</div>`).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
 
-    <p class="confirm-note">This marks the physical wine bottles as picked up for the month.</p>
-  `;
+    if (modalFoot) {
+      modalFoot.innerHTML = `
+        <button class="btn-ghost" onclick="closePickupModal()">Close</button>
+      `;
+    }
+  } else {
+    // Active pickup with multi-month checkboxes
+    const totalBottles = pending.reduce((sum, h) => sum + (h.wines ? h.wines.length : 2), 0);
+
+    const pendingHtml = pending.map(h => {
+      const wines = h.wines || [];
+      const isChecked = state.selectedPickupMonths.has(h.month);
+      return `
+        <div class="pickup-month-card ${isChecked ? 'is-selected' : ''}" id="pickupCard_${h.month}" onclick="handlePickupCardClick('${h.month}', event)">
+          <div class="pickup-month-top">
+            <label class="pickup-checkbox-label" onclick="event.stopPropagation()">
+              <input 
+                type="checkbox" 
+                class="pickup-checkbox" 
+                id="pickupChk_${h.month}" 
+                value="${h.month}" 
+                ${isChecked ? 'checked' : ''} 
+                onchange="togglePickupMonth('${h.month}', this.checked)"
+              >
+              <span class="pickup-month-name">${formatMonthName(h.month)}</span>
+            </label>
+            <span class="pickup-month-count">${wines.length} bottles</span>
+          </div>
+          <div class="pickup-month-wines">
+            ${wines.map(w => `
+              <div class="pickup-wine-item">
+                <span class="pickup-wine-dot">•</span>
+                <span class="pickup-wine-text">${esc(w)}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const pickedUpAccordionHtml = pickedUp.length > 0 ? `
+      <div class="pickup-history-accordion">
+        <button type="button" class="pickup-history-toggle" onclick="togglePickupHistory()">
+          <span>Previously Picked Up (${pickedUp.length} month${pickedUp.length > 1 ? 's' : ''})</span>
+          <span id="historyAccordionArrow">▼</span>
+        </button>
+        <div class="pickup-history-content" id="pickupHistoryContent" style="display:none;">
+          ${pickedUp.map(h => `
+            <div class="history-item">
+              <div class="history-item-top">
+                <span class="history-item-month">✓ ${formatMonthName(h.month)}</span>
+                <span class="history-item-date">${fmtTs(h.pickedUpAt)} by ${esc(h.pickedUpBy || 'staff')}</span>
+              </div>
+              <div class="history-item-wines">
+                ${(h.wines || []).map(w => `<div class="history-item-wine">• ${esc(w)}</div>`).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    ` : '';
+
+    modalBody.innerHTML = `
+      <div class="confirm-member">
+        <div class="confirm-name">${esc(m.name)}</div>
+        <div class="confirm-tier">${esc(m.tier)} &bull; ${esc(m.phone || 'No phone')}</div>
+      </div>
+
+      <div class="pickup-section-label">
+        <span>Select Months for Pickup (${pending.length} month${pending.length > 1 ? 's' : ''} waiting)</span>
+      </div>
+
+      <div class="pickup-months-list">
+        ${pendingHtml}
+      </div>
+
+      <!-- Live summary bar -->
+      <div class="pickup-summary-bar" id="pickupSummaryBar">
+        <div class="pickup-summary-info">
+          <div class="pickup-summary-releasing">Releasing: <strong id="pickupSummaryCount">${totalBottles} bottles</strong></div>
+          <div class="pickup-summary-sub" id="pickupSummarySub">(${pending.length} of ${pending.length} months selected)</div>
+        </div>
+        <button type="button" class="btn-toggle-all" id="btnToggleAllMonths" onclick="toggleSelectAllPickupMonths()">Deselect all</button>
+      </div>
+
+      <div class="pickup-server-row">
+        <label class="field-label" for="confirmPickupStaffSelect">Server Name:</label>
+        <select id="confirmPickupStaffSelect" class="confirm-staff-select">
+          ${serverOptions}
+        </select>
+      </div>
+
+      ${pickedUpAccordionHtml}
+    `;
+
+    if (modalFoot) {
+      modalFoot.innerHTML = `
+        <button class="btn-ghost" onclick="closePickupModal()">Cancel</button>
+        <button class="btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm hand-off (${totalBottles} bottles)</button>
+      `;
+    }
+  }
 
   document.getElementById("pickupModal").style.display = "flex";
+}
+
+function handlePickupCardClick(monthKey, event) {
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'LABEL') return;
+  const chk = document.getElementById(`pickupChk_${monthKey}`);
+  if (chk) {
+    chk.checked = !chk.checked;
+    togglePickupMonth(monthKey, chk.checked);
+  }
+}
+
+function togglePickupMonth(monthKey, isChecked) {
+  if (isChecked) {
+    state.selectedPickupMonths.add(monthKey);
+  } else {
+    state.selectedPickupMonths.delete(monthKey);
+  }
+
+  const card = document.getElementById(`pickupCard_${monthKey}`);
+  if (card) {
+    card.classList.toggle("is-selected", isChecked);
+  }
+
+  updatePickupSummary();
+}
+
+function toggleSelectAllPickupMonths() {
+  const m = state.selectedMember;
+  if (!m) return;
+  const pending = (m.pickupHistory || []).filter(h => h.status === "PENDING");
+  
+  const allSelected = pending.every(h => state.selectedPickupMonths.has(h.month));
+
+  pending.forEach(h => {
+    if (allSelected) {
+      state.selectedPickupMonths.delete(h.month);
+    } else {
+      state.selectedPickupMonths.add(h.month);
+    }
+    const chk = document.getElementById(`pickupChk_${h.month}`);
+    if (chk) chk.checked = !allSelected;
+    const card = document.getElementById(`pickupCard_${h.month}`);
+    if (card) card.classList.toggle("is-selected", !allSelected);
+  });
+
+  updatePickupSummary();
+}
+
+function updatePickupSummary() {
+  const m = state.selectedMember;
+  if (!m) return;
+
+  const pending = (m.pickupHistory || []).filter(h => h.status === "PENDING");
+  const selectedMonths = Array.from(state.selectedPickupMonths);
+  const selectedItems = pending.filter(h => selectedMonths.includes(h.month));
+  const bottlesCount = selectedItems.reduce((sum, h) => sum + (h.wines ? h.wines.length : 2), 0);
+  const monthsCount = selectedItems.length;
+
+  const countEl = document.getElementById("pickupSummaryCount");
+  const subEl = document.getElementById("pickupSummarySub");
+  const toggleBtn = document.getElementById("btnToggleAllMonths");
+  const confirmBtn = document.getElementById("confirmPickupBtn");
+
+  if (countEl) countEl.textContent = `${bottlesCount} bottle${bottlesCount === 1 ? '' : 's'}`;
+  if (subEl) subEl.textContent = `(${monthsCount} of ${pending.length} months selected)`;
+  if (toggleBtn) toggleBtn.textContent = monthsCount === pending.length ? "Deselect all" : "Select all";
+
+  if (confirmBtn) {
+    if (bottlesCount === 0) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Select at least 1 month";
+      confirmBtn.classList.add("btn-disabled");
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = `Confirm hand-off (${bottlesCount} bottle${bottlesCount === 1 ? '' : 's'})`;
+      confirmBtn.classList.remove("btn-disabled");
+    }
+  }
+}
+
+function togglePickupHistory() {
+  const content = document.getElementById("pickupHistoryContent");
+  const arrow = document.getElementById("historyAccordionArrow");
+  if (!content) return;
+  const isHidden = content.style.display === "none";
+  content.style.display = isHidden ? "block" : "none";
+  if (arrow) arrow.textContent = isHidden ? "▲" : "▼";
 }
 
 function closePickupModal() {
   const modal = document.getElementById("pickupModal");
   if (modal) modal.style.display = "none";
   state.selectedMember = null;
+  state.selectedPickupMonths.clear();
 }
 
 async function executePickup() {
   const m = state.selectedMember;
-  if (!m) return;
+  if (!m || state.selectedPickupMonths.size === 0) return;
 
   const staffSelect = document.getElementById("confirmPickupStaffSelect");
   const serverName = staffSelect ? staffSelect.value : (state.staffList[0] || "Haines S.");
@@ -491,34 +987,53 @@ async function executePickup() {
     btn.textContent = "Updating...";
   }
 
-  // Google Sheets sync if scriptUrl is present
+  const selectedMonths = Array.from(state.selectedPickupMonths);
+  let releasedBottlesCount = 0;
+
+  m.pickupHistory.forEach(h => {
+    if (selectedMonths.includes(h.month)) {
+      h.status = "PICKED_UP";
+      h.pickedUpAt = ts;
+      h.pickedUpBy = serverName;
+      releasedBottlesCount += (h.wines ? h.wines.length : 2);
+    }
+  });
+
+  const stillPending = m.pickupHistory.some(h => h.status === "PENDING");
+  m.pickupStatus = stillPending ? "READY" : "PICKED_UP";
+  m.pickedUpAt = ts;
+  m.pickedUpBy = serverName;
+
   if (state.scriptUrl) {
     try {
       await fetch(state.scriptUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "pickup", memberId: m.id, staff: serverName, notes: "iPad Bottle Pickup" })
+        body: JSON.stringify({
+          action: "bulk_pickup",
+          memberId: m.id,
+          months: selectedMonths,
+          staff: serverName,
+          bottlesCount: releasedBottlesCount,
+          notes: "iPad Bottle Pickup"
+        })
       });
     } catch (err) {
       console.warn("Server sync error (saved locally):", err);
     }
   }
 
-  // Update state
-  m.pickupStatus = "PICKED_UP";
-  m.pickedUpAt = ts;
-  m.pickedUpBy = serverName;
-
   saveLocalMembers();
   closePickupModal();
   renderMembers();
 
-  // Toast alert
-  showToastNotification(`${m.name} — Bottles Picked Up`, `2 bottles handed off by ${serverName}`);
+  showToastNotification(
+    `${m.name} — Bottles Picked Up`,
+    `${releasedBottlesCount} bottle${releasedBottlesCount === 1 ? '' : 's'} (${selectedMonths.length} month${selectedMonths.length === 1 ? '' : 's'}) handed off by ${serverName}`
+  );
 
   if (btn) {
     btn.disabled = false;
-    btn.textContent = "Confirm bottle hand-off";
   }
 }
 
@@ -530,7 +1045,8 @@ function promptRedeem(id) {
   if (!m || m.status === "REDEEMED") return;
 
   state.selectedMember = m;
-  const amt = `$${Number(m.creditAmount).toFixed(0)}`;
+  const isGrandCru = (m.tier || "").toLowerCase().includes("grand");
+  const amt = `$${Number(m.creditAmount || (isGrandCru ? 40 : 15)).toFixed(0)}`;
 
   const serverOptions = state.staffList.map(s => 
     `<option value="${esc(s)}">${esc(s)}</option>`
@@ -556,7 +1072,7 @@ function promptRedeem(id) {
       ${serverOptions}
     </select>
 
-    <p class="confirm-note">This locks the member's monthly credit across all stores until next month.</p>
+    <p class="confirm-note">This locks the member's monthly bar tab credit across all stores until next month.</p>
   `;
 
   document.getElementById("confirmModal").style.display = "flex";
@@ -701,25 +1217,20 @@ async function testConnection() {
 
 function loadSampleData() {
   if (!confirm("Reset to demo data? (Unsaved local changes will be replaced)")) return;
-  state.members = [...INITIAL_DEMO_MEMBERS];
+  state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
   saveLocalMembers();
   renderMembers();
   closeSettingsModal();
+  showToastNotification("Demo Data Restored", "Initial members and pickup histories reloaded");
 }
 
 function resetMonthDemo() {
-  if (!confirm("Reset all members back to AVAILABLE and READY for testing?")) return;
-  state.members.forEach(m => {
-    m.status = "AVAILABLE";
-    m.redeemedAt = "";
-    m.redeemedBy = "";
-    m.pickupStatus = "READY";
-    m.pickedUpAt = "";
-    m.pickedUpBy = "";
-  });
+  if (!confirm("Reset all members back to initial demo state?")) return;
+  state.members = JSON.parse(JSON.stringify(INITIAL_DEMO_MEMBERS));
   saveLocalMembers();
   renderMembers();
   closeSettingsModal();
+  showToastNotification("Demo Data Reset", "All members restored to default pickup and credit status");
 }
 
 function updateConnectionStatusText() {
@@ -745,4 +1256,24 @@ function fmtTs(ts) {
   } catch (e) {
     return ts;
   }
+}
+
+function formatMonthName(monthStr) {
+  if (!monthStr) return "";
+  const parts = monthStr.split("-");
+  if (parts.length < 2) return monthStr;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function formatMonthShort(monthStr) {
+  if (!monthStr) return "";
+  const parts = monthStr.split("-");
+  if (parts.length < 2) return monthStr;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "short" });
 }
