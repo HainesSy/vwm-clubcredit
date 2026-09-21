@@ -13,18 +13,18 @@
 
 :root {
   /* Slate / Charcoal Canvas */
-  --bg: #141416;
-  --surface: #1c1c20;
-  --surface-alt: #24242a;
-  --surface-hover: #2c2c34;
-  --border: #2c2c34;
-  --border-light: #383842;
-  --border-focus: #525260;
+  --bg: #121214;
+  --surface: #19191d;
+  --surface-alt: #222228;
+  --surface-hover: #2a2a32;
+  --border: #282832;
+  --border-light: #363644;
+  --border-focus: #781c28;
 
   /* Typography */
-  --text: #f4f4f6;
-  --text-dim: #8a8a96;
-  --text-muted: #b6b6c2;
+  --text: #f5f5f7;
+  --text-dim: #8e8e9c;
+  --text-muted: #b4b4c2;
 
   /* Rich Napa/Bordeaux Cabernet Wine Palette */
   --wine-primary: #721924;
@@ -32,31 +32,31 @@
   --wine-primary-active: #5c141d;
   --wine-subtle-bg: rgba(114, 25, 36, 0.12);
   --wine-subtle-border: rgba(136, 31, 44, 0.38);
-  --wine-text: #f2aab2;
+  --wine-badge-bg: rgba(114, 25, 36, 0.22);
+  --wine-badge-border: rgba(168, 38, 54, 0.36);
+  --wine-badge-text: #f09ea7;
+  --wine-text: #e28a94;
 
   /* Subtle Champagne / Muted Gold Accent */
   --champagne: #dfc18b;
   --champagne-dim: #c5a874;
   --champagne-bg: rgba(223, 193, 139, 0.10);
-  --champagne-border: rgba(223, 193, 139, 0.24);
+  --champagne-border: rgba(223, 193, 139, 0.26);
 
   /* Elegant Muted Emerald (Bar Credit) */
   --emerald-primary: #17654a;
   --emerald-hover: #1e7b5b;
   --emerald-active: #114c37;
-  --emerald-subtle-bg: rgba(23, 101, 74, 0.12);
-  --emerald-subtle-border: rgba(30, 123, 91, 0.28);
-  --emerald-text: #8ee0be;
+  --emerald-subtle-bg: rgba(23, 101, 74, 0.14);
+  --emerald-subtle-border: rgba(30, 123, 91, 0.30);
+  --emerald-badge-bg: rgba(23, 101, 74, 0.24);
+  --emerald-badge-border: rgba(40, 150, 112, 0.34);
+  --emerald-badge-text: #7ce2ba;
+  --emerald-text: #6ed9ad;
 
   /* Sleek Muted Slate Accent */
   --slate-dim-bg: rgba(255, 255, 255, 0.05);
   --slate-dim-border: rgba(255, 255, 255, 0.09);
-
-  /* Backward Compatibility Aliases */
-  --amber-btn: var(--wine-primary);
-  --amber-btn-hover: var(--wine-primary-hover);
-  --gpt-green: var(--emerald-primary);
-  --gpt-green-hover: var(--emerald-hover);
 
   /* Radii */
   --radius-sm: 6px;
@@ -406,10 +406,11 @@ body {
 }
 
 .pill.active {
-  background: var(--text);
-  border-color: var(--text);
-  color: #141416;
+  background: var(--surface-alt);
+  border-color: var(--champagne-dim);
+  color: var(--champagne);
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(223, 193, 139, 0.12);
 }
 
 .count {
@@ -421,7 +422,7 @@ body {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 16px;
+  gap: 18px;
   transition: opacity .15s ease;
 }
 
@@ -436,20 +437,20 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 18px 20px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 15px;
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
   animation: cardEntrance .2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, transform;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
 }
 
 .card:hover {
-  border-color: var(--border-light);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
-  transform: translateY(-1px);
+  border-color: rgba(223, 193, 139, 0.3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.36);
+  transform: translateY(-2px);
 }
 
 .card-top {
@@ -532,11 +533,10 @@ body {
 .card-benefits {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius);
-  padding: 11px 14px;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .benefit-row {
@@ -550,7 +550,7 @@ body {
 .benefit-label-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 500;
@@ -558,21 +558,23 @@ body {
 
 .benefit-icon {
   flex-shrink: 0;
-  transition: color .15s;
+  opacity: 0.88;
+  transition: opacity .15s;
 }
 
 .benefit-icon.icon-wine {
-  color: var(--wine-text);
+  color: var(--wine-badge-text);
 }
 
 .benefit-icon.icon-credit {
-  color: var(--emerald-text);
+  color: var(--emerald-badge-text);
 }
 
 .benefit-label {
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .benefit-divider {
@@ -585,31 +587,46 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   text-align: right;
   white-space: nowrap;
 }
 
-.benefit-status.status-wine .benefit-highlight {
-  color: var(--wine-text);
+.benefit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.15px;
 }
 
-.benefit-status.status-emerald .benefit-highlight {
-  color: var(--emerald-text);
-  font-weight: 600;
+.benefit-badge.badge-wine {
+  background: var(--wine-badge-bg);
+  border: 1px solid var(--wine-badge-border);
+  color: var(--wine-badge-text);
+}
+
+.benefit-badge.badge-emerald {
+  background: var(--emerald-badge-bg);
+  border: 1px solid var(--emerald-badge-border);
+  color: var(--emerald-badge-text);
 }
 
 .benefit-subcount {
-  font-size: 11.5px;
-  color: var(--text-dim);
-  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 500;
 }
 
-.benefit-status.status-muted .benefit-done {
+.benefit-done {
   color: var(--text-dim);
   font-size: 12.5px;
+  font-weight: 500;
+  padding-right: 2px;
 }
 
 /* Backward compatibility for status list */
@@ -626,12 +643,12 @@ body {
   border-radius: var(--radius-sm);
   font-size: 13px;
 }
-.card-status-row.status-amber {
+.card-status-row.status-wine {
   background: var(--wine-subtle-bg);
   border: 1px solid var(--wine-subtle-border);
   color: var(--wine-text);
 }
-.card-status-row.status-green {
+.card-status-row.status-emerald {
   background: var(--emerald-subtle-bg);
   border: 1px solid var(--emerald-subtle-border);
   color: var(--emerald-text);
@@ -830,8 +847,7 @@ body {
 }
 
 /* Modal Buttons */
-.btn-emerald,
-.btn-green {
+.btn-emerald {
   padding: 11px 22px;
   border-radius: var(--radius);
   background: var(--emerald-primary);
@@ -844,14 +860,12 @@ body {
   box-shadow: 0 2px 8px rgba(23, 101, 74, 0.3);
 }
 
-.btn-emerald:hover,
-.btn-green:hover {
+.btn-emerald:hover {
   background: var(--emerald-hover);
   box-shadow: 0 4px 14px rgba(23, 101, 74, 0.45);
 }
 
-.btn-wine,
-.btn-amber {
+.btn-wine {
   padding: 11px 22px;
   border-radius: var(--radius);
   background: var(--wine-primary);
@@ -864,8 +878,7 @@ body {
   box-shadow: 0 2px 8px rgba(114, 25, 36, 0.3);
 }
 
-.btn-wine:hover,
-.btn-amber:hover {
+.btn-wine:hover {
   background: var(--wine-primary-hover);
   box-shadow: 0 4px 14px rgba(114, 25, 36, 0.45);
 }
@@ -1133,6 +1146,16 @@ body {
 
 .pickup-history-toggle:hover {
   color: var(--text);
+}
+
+.accordion-chevron {
+  transition: transform .2s ease;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.accordion-chevron.is-open {
+  transform: rotate(180deg);
 }
 
 .pickup-history-content {

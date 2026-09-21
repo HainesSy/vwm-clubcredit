@@ -734,7 +734,7 @@ function cardHtml(m) {
           </div>
           <div class="benefit-status ${pendingCount > 0 ? 'status-wine' : 'status-muted'}">
             ${pendingCount > 0
-              ? `<span class="benefit-highlight">${pendingBottles} bottle${pendingBottles > 1 ? 's' : ''} ready</span>${pendingCount > 1 ? `<span class="benefit-subcount">(${pendingCount} mos)</span>` : ''}`
+              ? `<span class="benefit-badge badge-wine">${pendingBottles} bottle${pendingBottles > 1 ? 's' : ''} ready${pendingCount > 1 ? ` <span class="benefit-subcount">(${pendingCount} mos)</span>` : ''}</span>`
               : `<span class="benefit-done">All bottles picked up</span>`
             }
           </div>
@@ -753,7 +753,7 @@ function cardHtml(m) {
           </div>
           <div class="benefit-status ${isCreditAvail ? 'status-emerald' : 'status-muted'}">
             ${isCreditAvail
-              ? `<span class="benefit-highlight">${amt} available</span>`
+              ? `<span class="benefit-badge badge-emerald">${amt} available</span>`
               : `<span class="benefit-done">${amt} redeemed</span>`
             }
           </div>
@@ -771,7 +771,7 @@ function cardHtml(m) {
         </button>
 
         ${isCreditAvail
-          ? `<button type="button" class="action-btn btn-credit" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem Credit</button>`
+          ? `<button type="button" class="action-btn btn-credit" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem ${amt}</button>`
           : `<button type="button" class="action-btn btn-locked" disabled title="Bar tab credit already redeemed for this month">Credit Redeemed</button>`
         }
       </div>
@@ -886,7 +886,7 @@ function promptPickup(id) {
       <div class="pickup-history-accordion">
         <button type="button" class="pickup-history-toggle" onclick="togglePickupHistory()">
           <span>Previously Picked Up (${pickedUp.length} month${pickedUp.length > 1 ? 's' : ''})</span>
-          <span id="historyAccordionArrow">▼</span>
+          <svg id="historyAccordionArrow" class="accordion-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="pickup-history-content" id="pickupHistoryContent" style="display:none;">
           ${pickedUp.map(h => `
@@ -1032,7 +1032,9 @@ function togglePickupHistory() {
   if (!content) return;
   const isHidden = content.style.display === "none";
   content.style.display = isHidden ? "block" : "none";
-  if (arrow) arrow.textContent = isHidden ? "▲" : "▼";
+  if (arrow) {
+    arrow.classList.toggle("is-open", isHidden);
+  }
 }
 
 function closePickupModal() {

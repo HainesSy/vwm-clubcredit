@@ -82,7 +82,9 @@
               spellcheck="false" 
               oninput="handleResultsSearch(this.value)"
             >
-            <button type="button" class="search-clear-btn" id="clearSearchBtn2" onclick="clearResultsSearch()" style="display:none;">&#x2715;</button>
+            <button type="button" class="search-clear-btn" id="clearSearchBtn2" onclick="clearResultsSearch()" style="display:none;" aria-label="Clear search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
         </div>
 
@@ -106,12 +108,14 @@
       <div class="modal">
         <div class="modal-head">
           <h2>Confirm bar credit redemption</h2>
-          <button class="modal-x" onclick="closeConfirmModal()">&#x2715;</button>
+          <button class="modal-x" onclick="closeConfirmModal()" aria-label="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
         <div class="modal-body" id="confirmModalBody"></div>
         <div class="modal-foot">
           <button class="btn-ghost" onclick="closeConfirmModal()">Cancel</button>
-          <button class="btn-emerald btn-green" id="confirmRedeemBtn" onclick="executeRedemption()">Redeem credit</button>
+          <button class="btn-emerald" id="confirmRedeemBtn" onclick="executeRedemption()">Redeem credit</button>
         </div>
       </div>
     </div>
@@ -121,12 +125,14 @@
       <div class="modal modal-wide">
         <div class="modal-head">
           <h2 id="pickupModalHeading">Wine Bottle Pickup</h2>
-          <button class="modal-x" onclick="closePickupModal()">&#x2715;</button>
+          <button class="modal-x" onclick="closePickupModal()" aria-label="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
         <div class="modal-body" id="pickupModalBody"></div>
         <div class="modal-foot" id="pickupModalFoot">
           <button class="btn-ghost" id="pickupCancelBtn" onclick="closePickupModal()">Cancel</button>
-          <button class="btn-wine btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm bottle hand-off</button>
+          <button class="btn-wine" id="confirmPickupBtn" onclick="executePickup()">Confirm bottle hand-off</button>
         </div>
       </div>
     </div>
@@ -137,7 +143,9 @@
         <strong id="toastAlertTitle"></strong>
         <span id="toastAlertMessage"></span>
       </div>
-      <button class="snackbar-close" onclick="dismissToastAlert()">&#x2715;</button>
+      <button class="snackbar-close" onclick="dismissToastAlert()" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
 
     <!-- Settings Modal -->
@@ -145,7 +153,9 @@
       <div class="modal modal-wide">
         <div class="modal-head">
           <h2>Settings</h2>
-          <button class="modal-x" onclick="closeSettingsModal()">&#x2715;</button>
+          <button class="modal-x" onclick="closeSettingsModal()" aria-label="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
         <div class="modal-body">
           <label class="field-label">Google Apps Script URL</label>
@@ -165,7 +175,7 @@
         </div>
         <div class="modal-foot">
           <button class="btn-ghost" onclick="closeSettingsModal()">Cancel</button>
-          <button class="btn-emerald btn-green" onclick="saveSettings()">Save</button>
+          <button class="btn-emerald" onclick="saveSettings()">Save</button>
         </div>
       </div>
     </div>
