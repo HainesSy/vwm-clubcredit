@@ -215,7 +215,7 @@ const assert = require("assert");
   assert.ok(cardOutput.includes("<svg") && cardOutput.includes("action-btn-svg"), "Card actions must have action-btn-svg vector icons");
   assert.ok(cardOutput.includes("M9 2h6v3a4 4 0 0 1 1 2.5V20"), "Bottle pickup button must include wine bottle SVG path");
   assert.ok(cardOutput.includes('rect width="20" height="14"'), "Credit button must include credit card SVG");
-  assert.ok(cardOutput.includes("Club Pickup (4 mos)"), "Card button text for member with 4 pending months must be 'Club Pickup (4 mos)'");
+  assert.ok(cardOutput.includes("Club Pickup ×4"), "Card button text for member with 4 pending months must be 'Club Pickup ×4'");
 
   const singleMonthMember = normalizeMember({
     ...member1,
@@ -223,7 +223,7 @@ const assert = require("assert");
     pickupHistory: makePickupHistory("Grand Cru Club", ["2026-09"])
   });
   const singleCardOutput = cardHtml(singleMonthMember);
-  assert.ok(singleCardOutput.includes("Club Pickup (1 mo)"), "Card button text for member with 1 pending month must be 'Club Pickup (1 mo)'");
+  assert.ok(singleCardOutput.includes("Club Pickup ×1"), "Card button text for member with 1 pending month must be 'Club Pickup ×1'");
 
   const zeroMonthMember = normalizeMember({
     ...member1,
@@ -232,7 +232,7 @@ const assert = require("assert");
   });
   const zeroCardOutput = cardHtml(zeroMonthMember);
   assert.ok(zeroCardOutput.includes("Bottle History"), "Card button text for member with 0 pending months must be 'Bottle History'");
-  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons and 'Club Pickup (X mos)' rendered in action buttons");
+  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons and 'Club Pickup ×N' rendered in action buttons");
 
   // Test 9: Safari WebKit Timestamp Sanitization
   console.log("Checking Requirement 9: Safari WebKit timestamp sanitization...");
