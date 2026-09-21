@@ -1103,7 +1103,7 @@ function promptPickup(id) {
       </div>
 
       <div class="pickup-server-row modal-staff-section">
-        <label class="field-label">Server / Bartender:</label>
+        <label class="field-label">Server:</label>
         <div class="staff-chips-grid" id="pickupStaffChips">
           ${renderStaffChips('pickupStaffChips', state.selectedStaff)}
         </div>
@@ -1329,7 +1329,7 @@ function promptRedeem(id) {
     </div>
 
     <div class="modal-staff-section">
-      <label class="field-label">Server / Bartender:</label>
+      <label class="field-label">Server:</label>
       <div class="staff-chips-grid" id="creditStaffChips">
         ${renderStaffChips('creditStaffChips', state.selectedStaff)}
       </div>
