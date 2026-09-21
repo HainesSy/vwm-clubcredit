@@ -386,7 +386,7 @@ function renderStaffChips(containerId, activeStaff) {
         type="button" 
         class="staff-chip ${isSelected ? 'selected' : ''}" 
         data-staff="${esc(s)}" 
-        onclick="selectStaffChip('${containerId}', '${esc(s)}')"
+        onclick="selectStaffChip('${containerId}', this.getAttribute('data-staff'))"
       >
         <span class="staff-chip-dot"></span>
         <span class="staff-chip-name">${esc(s)}</span>
@@ -396,6 +396,7 @@ function renderStaffChips(containerId, activeStaff) {
 }
 
 function selectStaffChip(containerId, staffName) {
+  if (!staffName) return;
   state.selectedStaff = staffName;
   setActiveServer(staffName);
   const container = document.getElementById(containerId);
@@ -545,7 +546,9 @@ async function fetchFromGoogleSheets(isBackground = false) {
     const data = await res.json();
     if (data.success && Array.isArray(data.members)) {
       const existingMap = new Map(state.members.map(m => [m.id, m]));
+      const incomingIds = new Set();
       const merged = data.members.map(incoming => {
+        incomingIds.add(incoming.id);
         const existing = existingMap.get(incoming.id);
         if (existing) {
           // 1. Data Sync Overwrite Protection: Never overwrite local REDEEMED status with AVAILABLE
@@ -581,7 +584,17 @@ async function fetchFromGoogleSheets(isBackground = false) {
         }
         return normalizeMember(incoming);
       });
-      state.members = merged;
+
+      // Preserve existing local members not included in partial incoming sheet data
+      const preservedLocalMembers = state.members.filter(m => !incomingIds.has(m.id));
+      state.members = [...merged, ...preservedLocalMembers];
+
+      // Keep active selectedMember reference in sync with freshly merged array
+      if (state.selectedMember) {
+        const freshSelected = state.members.find(x => x.id === state.selectedMember.id);
+        if (freshSelected) state.selectedMember = freshSelected;
+      }
+
       saveLocalMembers();
       if (state.viewMode === "results") renderMembers();
     }
@@ -696,6 +709,10 @@ function handleResultsSearch(query) {
   clearTimeout(searchDebounceTimer);
   if (!trimmed) {
     state.searchQuery = "";
+    const input2 = document.getElementById("memberSearchInput2");
+    if (input2 && document.activeElement !== input2) {
+      input2.focus();
+    }
     renderMembers();
     return;
   }
@@ -704,6 +721,12 @@ function handleResultsSearch(query) {
     state.searchQuery = trimmed;
     renderMembers();
   }, 40);
+}
+
+function handleResultsKeydown(event) {
+  if (event.key === "Escape") {
+    clearResultsSearch();
+  }
 }
 
 function clearResultsSearch() {
@@ -728,15 +751,6 @@ function matchMember(m, query) {
   const q = query.trim().toLowerCase();
   if (!q) return true;
 
-  const qDigits = q.replace(/[^0-9]/g, "");
-  const mPhoneDigits = (m.phone || "").replace(/[^0-9]/g, "");
-  const mIdDigits = (m.id || "").replace(/[^0-9]/g, "");
-
-  // Direct phone or member ID numeric match (3+ digits)
-  if (qDigits.length >= 3 && (mPhoneDigits.includes(qDigits) || mIdDigits.includes(qDigits))) {
-    return true;
-  }
-
   // Tokenize multi-word query by whitespace
   const tokens = q.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return true;
@@ -746,6 +760,9 @@ function matchMember(m, query) {
   const tier = (m.tier || "").toLowerCase();
   const idStr = (m.id || "").toLowerCase();
   const phone = (m.phone || "").toLowerCase();
+
+  const mPhoneDigits = phone.replace(/[^0-9]/g, "");
+  const mIdDigits = idStr.replace(/[^0-9]/g, "");
 
   return tokens.every(token => {
     // Substring matches on name, email, tier, id, or phone
@@ -1203,11 +1220,11 @@ function closePickupModal() {
 }
 
 async function executePickup() {
-  const m = state.selectedMember;
+  const m = (state.selectedMember && state.members.find(x => x.id === state.selectedMember.id)) || state.selectedMember;
   if (!m || state.selectedPickupMonths.size === 0) return;
 
   const serverName = state.selectedStaff || state.activeServer || (state.staffList[0] || "Haines S.");
-  const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
+  const ts = getLocalTimestamp();
 
   const btn = document.getElementById("confirmPickupBtn");
   if (btn) {
@@ -1331,11 +1348,11 @@ function closeConfirmModal() {
 }
 
 async function executeRedemption() {
-  const m = state.selectedMember;
+  const m = (state.selectedMember && state.members.find(x => x.id === state.selectedMember.id)) || state.selectedMember;
   if (!m) return;
 
   const serverName = state.selectedStaff || state.activeServer || (state.staffList[0] || "Haines S.");
-  const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
+  const ts = getLocalTimestamp();
 
   const btn = document.getElementById("confirmRedeemBtn");
   if (btn) {
@@ -1509,6 +1526,12 @@ function updateConnectionStatusText() {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+function getLocalTimestamp() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
 function esc(s) {
   if (!s) return "";
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -1517,13 +1540,26 @@ function esc(s) {
 function fmtTs(ts) {
   if (!ts) return "earlier this month";
   try {
-    const sanitized = String(ts).trim().replace(" ", "T");
-    const d = new Date(sanitized);
-    if (isNaN(d.getTime())) return ts;
+    let d;
+    if (ts instanceof Date) {
+      d = ts;
+    } else if (typeof ts === "number" || (/^\d+$/.test(String(ts).trim()) && String(ts).trim().length > 8)) {
+      d = new Date(Number(ts));
+    } else {
+      const str = String(ts).trim();
+      const sanitized = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(str)
+        ? str.replace(/\s+/, "T")
+        : str.replace(" ", "T");
+      d = new Date(sanitized);
+      if (isNaN(d.getTime())) {
+        d = new Date(str);
+      }
+    }
+    if (isNaN(d.getTime())) return String(ts);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " at " +
            d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   } catch (e) {
-    return ts;
+    return String(ts);
   }
 }
 
