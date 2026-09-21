@@ -233,7 +233,19 @@ const assert = require("assert");
   });
   const zeroCardOutput = cardHtml(zeroMonthMember);
   assert.ok(zeroCardOutput.includes("Bottle History"), "Card button text for member with 0 pending months must be 'Bottle History'");
-  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons, subtle '×N', and hidden '×1' in action buttons");
+
+  const redeemedMember = normalizeMember({
+    ...member1,
+    id: "MBR-TEST-REDEEMED",
+    status: "REDEEMED",
+    redeemedAt: "2026-09-04 18:22:15",
+    redeemedBy: "Haines S."
+  });
+  const redeemedCardOutput = cardHtml(redeemedMember);
+  assert.ok(redeemedCardOutput.includes("Credit Redeemed"), "Redeemed member button must be 'Credit Redeemed'");
+  assert.ok(redeemedCardOutput.includes("Redeemed Sep 4"), "Redeemed member status line must include 'Redeemed Sep 4'");
+  assert.ok(redeemedCardOutput.includes("Haines S."), "Redeemed member status line must include server name");
+  console.log("✓ Requirement 8 PASSED: Crisp vector SVG icons, subtle '×N', hidden '×1', and Credit Redeemed button with date/server in status line");
 
   // Test 9: Safari WebKit Timestamp Sanitization
   console.log("Checking Requirement 9: Safari WebKit timestamp sanitization...");
