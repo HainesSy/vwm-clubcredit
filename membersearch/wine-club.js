@@ -707,11 +707,6 @@ function cardHtml(m) {
   const pendingCount = pendingItems.length;
   const pendingBottles = pendingItems.reduce((acc, h) => acc + (h.wines ? h.wines.length : 2), 0);
 
-  const pendingLabels = pendingItems.map(h => formatMonthShort(h.month)).join(", ");
-
-  const pickedUpItems = history.filter(h => h.status === "PICKED_UP");
-  const lastPickedUp = pickedUpItems[pickedUpItems.length - 1];
-
   return `
     <div class="card" id="card-${m.id}">
       <div class="card-top">
@@ -722,45 +717,45 @@ function cardHtml(m) {
             ${m.email ? `<span class="card-meta-dot">&bull;</span><span class="card-email">${esc(m.email)}</span>` : ""}
           </div>
         </div>
-        <span class="tag ${isGrandCru ? 'tag-gold' : 'tag-purple'}">${esc(m.tier)}</span>
+        <span class="tag ${isGrandCru ? 'tag-champagne' : 'tag-slate'}">${esc(m.tier)}</span>
       </div>
 
-      <div class="card-status-list">
-        <!-- Wine Pickup Status Row -->
-        <div class="card-status-row ${pendingCount > 0 ? 'status-amber' : 'status-done'}">
-          <div class="status-row-icon">🍷</div>
-          <div class="status-row-text">
-            <div class="status-row-primary">
-              ${pendingCount > 0
-                ? `<span class="status-highlight">${pendingCount} month${pendingCount > 1 ? 's' : ''} waiting</span> <span class="status-pill-bottles">${pendingBottles} btl${pendingBottles > 1 ? 's' : ''}</span>`
-                : `<span class="status-done-title">All bottles picked up</span>`
-              }
-            </div>
-            <div class="status-row-secondary">
-              ${pendingCount > 0
-                ? `Pending: ${pendingLabels}`
-                : (lastPickedUp && lastPickedUp.pickedUpAt ? `Last pickup ${fmtTs(lastPickedUp.pickedUpAt)} by ${esc(lastPickedUp.pickedUpBy || 'staff')}` : 'Up to date')
-              }
-            </div>
+      <div class="card-benefits">
+        <!-- Wine Bottles Status Row -->
+        <div class="benefit-row">
+          <div class="benefit-label-group">
+            <svg class="benefit-icon icon-wine" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 22h8"/>
+              <path d="M7 10h10"/>
+              <path d="M12 15v7"/>
+              <path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/>
+            </svg>
+            <span class="benefit-label">Bottle Allocations</span>
+          </div>
+          <div class="benefit-status ${pendingCount > 0 ? 'status-wine' : 'status-muted'}">
+            ${pendingCount > 0
+              ? `<span class="benefit-highlight">${pendingBottles} bottle${pendingBottles > 1 ? 's' : ''} ready</span>${pendingCount > 1 ? `<span class="benefit-subcount">(${pendingCount} mos)</span>` : ''}`
+              : `<span class="benefit-done">All bottles picked up</span>`
+            }
           </div>
         </div>
 
+        <div class="benefit-divider"></div>
+
         <!-- Bar Credit Status Row -->
-        <div class="card-status-row ${isCreditAvail ? 'status-green' : 'status-done'}">
-          <div class="status-row-icon">💳</div>
-          <div class="status-row-text">
-            <div class="status-row-primary">
-              ${isCreditAvail
-                ? `<span class="status-highlight">${amt} bar credit</span> available`
-                : `<span class="status-done-title">${amt} bar credit redeemed</span>`
-              }
-            </div>
-            <div class="status-row-secondary">
-              ${isCreditAvail
-                ? `Use-it-or-lose-it for ${getCurrentMonthName()}`
-                : (m.redeemedAt ? `Redeemed ${fmtTs(m.redeemedAt)} by ${esc(m.redeemedBy || 'staff')}` : `Redeemed for ${getCurrentMonthName()}`)
-              }
-            </div>
+        <div class="benefit-row">
+          <div class="benefit-label-group">
+            <svg class="benefit-icon icon-credit" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="5" rx="2"/>
+              <line x1="2" x2="22" y1="10" y2="10"/>
+            </svg>
+            <span class="benefit-label">Bar Tab Credit</span>
+          </div>
+          <div class="benefit-status ${isCreditAvail ? 'status-emerald' : 'status-muted'}">
+            ${isCreditAvail
+              ? `<span class="benefit-highlight">${amt} available</span>`
+              : `<span class="benefit-done">${amt} redeemed</span>`
+            }
           </div>
         </div>
       </div>
@@ -768,7 +763,7 @@ function cardHtml(m) {
       <div class="card-actions">
         <button 
           type="button" 
-          class="action-btn ${pendingCount > 0 ? 'active pickup-btn' : 'btn-dim'}" 
+          class="action-btn ${pendingCount > 0 ? 'btn-wine' : 'btn-dim'}" 
           onclick="promptPickup('${m.id}')"
           title="${pendingCount > 0 ? `View ${pendingBottles} bottles ready for pickup` : 'View previous pickup history'}"
         >
@@ -776,8 +771,8 @@ function cardHtml(m) {
         </button>
 
         ${isCreditAvail
-          ? `<button type="button" class="action-btn active credit-btn" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem Credit</button>`
-          : `<button type="button" class="action-btn locked" disabled title="Bar tab credit already redeemed for this month">Credit Redeemed</button>`
+          ? `<button type="button" class="action-btn btn-credit" onclick="promptRedeem('${m.id}')" title="Redeem ${amt} bar tab credit">Redeem Credit</button>`
+          : `<button type="button" class="action-btn btn-locked" disabled title="Bar tab credit already redeemed for this month">Credit Redeemed</button>`
         }
       </div>
     </div>
@@ -822,7 +817,9 @@ function promptPickup(id) {
       </div>
 
       <div class="pickup-all-done-banner">
-        <div class="done-check-badge">✓</div>
+        <div class="done-check-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
         <div class="done-title">All bottles are picked up</div>
         <div class="done-sub">This member has no pending wine allocations waiting for pickup.</div>
       </div>
@@ -833,7 +830,7 @@ function promptPickup(id) {
           ${pickedUp.map(h => `
             <div class="history-item">
               <div class="history-item-top">
-                <span class="history-item-month">✓ ${formatMonthName(h.month)}</span>
+                <span class="history-item-month">${formatMonthName(h.month)}</span>
                 <span class="history-item-date">${fmtTs(h.pickedUpAt)} by ${esc(h.pickedUpBy || 'staff')}</span>
               </div>
               <div class="history-item-wines">
@@ -895,7 +892,7 @@ function promptPickup(id) {
           ${pickedUp.map(h => `
             <div class="history-item">
               <div class="history-item-top">
-                <span class="history-item-month">✓ ${formatMonthName(h.month)}</span>
+                <span class="history-item-month">${formatMonthName(h.month)}</span>
                 <span class="history-item-date">${fmtTs(h.pickedUpAt)} by ${esc(h.pickedUpBy || 'staff')}</span>
               </div>
               <div class="history-item-wines">
@@ -943,7 +940,7 @@ function promptPickup(id) {
     if (modalFoot) {
       modalFoot.innerHTML = `
         <button class="btn-ghost" onclick="closePickupModal()">Cancel</button>
-        <button class="btn-amber" id="confirmPickupBtn" onclick="executePickup()">Confirm hand-off (${totalBottles} bottle${totalBottles === 1 ? '' : 's'})</button>
+        <button class="btn-wine" id="confirmPickupBtn" onclick="executePickup()">Confirm hand-off (${totalBottles} bottle${totalBottles === 1 ? '' : 's'})</button>
       `;
     }
   }
@@ -1179,7 +1176,7 @@ async function executeRedemption() {
       });
       const data = await res.json();
       if (!data.success && data.alreadyRedeemed) {
-        alert(`⚠️ Already redeemed!\n${data.error}`);
+        alert(`Already redeemed!\n${data.error}`);
         closeConfirmModal();
         fetchFromGoogleSheets();
         return;
